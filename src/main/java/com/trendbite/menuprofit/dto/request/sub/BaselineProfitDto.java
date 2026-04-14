@@ -6,6 +6,6 @@ import lombok.Setter;
 
 @Getter @Setter @NoArgsConstructor
 public class BaselineProfitDto {
-    private Integer currentMonthlyRevenue;         // 현재 월 매출 (원)
-    private Integer currentMonthlyOperatingProfit; // 현재 월 영업이익 (원)
+    private Long currentMonthlyRevenue;         // 현재 월 매출 (원) — Integer 오버플로 방지를 위해 Long 사용
+    private Long currentMonthlyOperatingProfit; // 현재 월 영업이익 (원)
 }

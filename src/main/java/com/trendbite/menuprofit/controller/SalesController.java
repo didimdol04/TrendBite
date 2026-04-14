@@ -4,6 +4,7 @@ import com.trendbite.menuprofit.dto.request.SalesRecordRequestDto;
 import com.trendbite.menuprofit.dto.response.SalesCorrectionResponseDto;
 import com.trendbite.menuprofit.dto.response.SalesRecordResponseDto;
 import com.trendbite.menuprofit.service.SalesService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,7 +22,7 @@ public class SalesController {
      */
     @PostMapping("/record")
     public ResponseEntity<SalesRecordResponseDto> record(
-            @RequestBody SalesRecordRequestDto request) {
+            @Valid @RequestBody SalesRecordRequestDto request) {
         try {
             SalesRecordResponseDto response = salesService.record(request);
             return ResponseEntity.ok(response);

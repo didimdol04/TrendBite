@@ -3,6 +3,7 @@ package com.trendbite.menuprofit.controller;
 import com.trendbite.menuprofit.dto.request.SimulationRequestDto;
 import com.trendbite.menuprofit.dto.response.SimulationResponseDto;
 import com.trendbite.menuprofit.service.SimulationService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,7 +21,7 @@ public class SimulationController {
      */
     @PostMapping("/run")
     public ResponseEntity<SimulationResponseDto> run(
-            @RequestBody SimulationRequestDto request) {
+            @Valid @RequestBody SimulationRequestDto request) {
         try {
             SimulationResponseDto response = simulationService.simulate(request);
             return ResponseEntity.ok(response);

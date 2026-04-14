@@ -9,6 +9,7 @@ import com.trendbite.menuprofit.repository.ActualSalesRepository;
 import com.trendbite.menuprofit.repository.MenuRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class SalesService {
     private final ActualSalesRepository actualSalesRepository;
     private final MenuRepository menuRepository;
 
+    @Transactional
     public SalesRecordResponseDto record(SalesRecordRequestDto req) {
 
         // 음수 값 검증
@@ -57,6 +59,7 @@ public class SalesService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
     public SalesCorrectionResponseDto getCorrection(Long menuId) {
         menuRepository.findById(menuId)
                 .orElseThrow(() -> new IllegalArgumentException(

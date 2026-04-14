@@ -10,10 +10,11 @@ import java.util.List;
 @Service
 public class FinanceService {
 
-    private static final double WEEKS_PER_MONTH             = 4.345;
-    private static final double NIGHT_SHIFT_EXTRA           = 0.5;
-    private static final double MIN_HOURS_FOR_HOLIDAY_PAY   = 15.0;
-    private static final double DEFAULT_DAILY_WORK_HOURS    = 8.0;
+    private static final double WEEKS_PER_MONTH                  = 4.345;
+    private static final double NIGHT_SHIFT_EXTRA                = 0.5;
+    private static final double MIN_HOURS_FOR_HOLIDAY_PAY        = 15.0;
+    private static final double DEFAULT_DAILY_WORK_HOURS         = 8.0;
+    private static final double WEEKLY_HOLIDAY_PAY_BASE_HOURS    = 8.0; // 주휴수당 기준 하루 소정근로시간 (근로기준법 기준)
 
     public FinanceResponseDto calculate(FinanceRequestDto req) {
 
@@ -27,8 +28,9 @@ public class FinanceService {
                 req.getDirectLaborCost().getEmployees());
 
         // 3. 단위당 직접노무원가
-        int    workingDaysPerWeek  = req.getSalesAssumption().getWorkingDaysPerWeek();
-        double monthlyWorkingDays  = workingDaysPerWeek * WEEKS_PER_MONTH;
+        int    workingDaysPerWeek     = req.getSalesAssumption().getWorkingDaysPerWeek();
+        double monthlyWorkingDays     = workingDaysPerWeek * WEEKS_PER_MONTH;
+        long   monthlyWorkingDaysLong = Math.round(monthlyWorkingDays); // 반올림 후 long 변환 (truncation 방지)
 
         // 일 영업시간: 사용자 입력값 우선, 없으면 기본값 8.0
         double dailyWorkHours = req.getSalesAssumption().getDailyWorkHours() != null
@@ -51,8 +53,8 @@ public class FinanceService {
 
         // 6. 월 매출 & 변동원가
         int  expectedDailySales  = req.getSalesAssumption().getExpectedDailySales();
-        long monthlyRevenue      = (long) sellingPrice * expectedDailySales * (long) monthlyWorkingDays;
-        long monthlyVariableCost = (long) totalVariablePerUnit * expectedDailySales * (long) monthlyWorkingDays;
+        long monthlyRevenue      = (long) sellingPrice * expectedDailySales * monthlyWorkingDaysLong;
+        long monthlyVariableCost = (long) totalVariablePerUnit * expectedDailySales * monthlyWorkingDaysLong;
 
         // 7. 고정비 합산
         long fixedCostTotal = calcFixedCost(req);
@@ -64,7 +66,7 @@ public class FinanceService {
         double profitMargin = monthlyRevenue > 0
                 ? Math.round((double) operatingProfit / monthlyRevenue * 1000.0) / 1000.0 : 0;
         double foodCostRate = monthlyRevenue > 0
-                ? Math.round((double) (ingredientCost * expectedDailySales * (long) monthlyWorkingDays)
+                ? Math.round((double) (ingredientCost * expectedDailySales * monthlyWorkingDaysLong)
                 / monthlyRevenue * 1000.0) / 1000.0 : 0;
 
         // 10. BEP (고정비 배분 적용)
@@ -72,7 +74,7 @@ public class FinanceService {
         int bepPerDay = contributionMargin > 0
                 ? (int) Math.ceil((double) allocatedFixedCost / contributionMargin / monthlyWorkingDays)
                 : Integer.MAX_VALUE;
-        long bepRevenue = (long) bepPerDay * sellingPrice * (long) monthlyWorkingDays;
+        long bepRevenue = (long) bepPerDay * sellingPrice * monthlyWorkingDaysLong;
 
         // 11. 증분 이익 (baselineProfit 있을 때만)
         FinanceResponseDto.IncrementalDto incremental = null;
@@ -139,7 +141,8 @@ public class FinanceService {
         // 주휴수당: 주 15시간 이상에만 적용
         double weeklyHolidayPay = 0;
         if (weeklyHours >= MIN_HOURS_FOR_HOLIDAY_PAY) {
-            weeklyHolidayPay = hourlyWage * 8 * (weeklyHours / 40.0) * WEEKS_PER_MONTH;
+            weeklyHolidayPay = hourlyWage * WEEKLY_HOLIDAY_PAY_BASE_HOURS
+                    * (weeklyHours / 40.0) * WEEKS_PER_MONTH;
         }
 
         // 야간수당 (1.5배)
@@ -161,7 +164,7 @@ public class FinanceService {
             // 신규 창업자: 전체 고정비 그대로
             return fixedCostTotal;
         }
-        Integer totalRevenue = req.getBaselineProfit().getCurrentMonthlyRevenue();
+        Long totalRevenue = req.getBaselineProfit().getCurrentMonthlyRevenue();
         if (totalRevenue == null || totalRevenue <= 0) {
             return fixedCostTotal;
         }
