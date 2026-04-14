@@ -51,25 +51,22 @@ public class SimulationService {
         // 8. 경고 레벨
         String warningLevel = calcWarningLevel(totalOperatingProfit, operationBurdenIndex);
 
-        // 9. 기존 이익 기준 증분 계산
-        //    baselineProfit이 있는 경우: FinanceService incremental의 additionalOperatingProfit이
-        //    신메뉴 추가 영업이익이므로, 기존 매장 이익은 SimulationRequest를 통해 별도로 전달받아야 함
-        //    → 현재는 FinanceResponseDto.incremental에서 profitGrowthRate 기준으로 계산
+        // 9. 기존 이익 기준 증분 계산 (baselineOperatingProfit 있을 때만)
         SimulationResponseDto.BaselineDto    baseline    = null;
         SimulationResponseDto.IncrementalDto incremental = null;
 
-        if (finance.getIncremental() != null) {
-            // finance.incremental.additionalOperatingProfit = 신메뉴 영업이익 (보정 전)
-            // 보정 후 영업이익(totalOperatingProfit)과 기존 이익을 비교
-            // TODO: 기존 매장 이익을 SimulationRequestDto에 baselineOperatingProfit 필드 추가 후 연결
-            long additionalProfit = finance.getIncremental().getAdditionalOperatingProfit();
+        if (finance.getIncremental() != null && req.getBaselineOperatingProfit() != null) {
+            long baselineProfit   = req.getBaselineOperatingProfit();
+            // 입지 보정 후 영업이익 기준으로 증분 계산
+            long additionalProfit = totalOperatingProfit - baselineProfit;
+
             baseline = SimulationResponseDto.BaselineDto.builder()
-                    .currentOperatingProfit(additionalProfit)
+                    .currentOperatingProfit(baselineProfit)
                     .build();
             incremental = SimulationResponseDto.IncrementalDto.builder()
-                    .additionalOperatingProfit(totalOperatingProfit)
-                    .profitGrowthRate(additionalProfit > 0
-                            ? Math.round((double) totalOperatingProfit / additionalProfit * 1000.0) / 1000.0
+                    .additionalOperatingProfit(additionalProfit)
+                    .profitGrowthRate(baselineProfit > 0
+                            ? Math.round((double) additionalProfit / baselineProfit * 1000.0) / 1000.0
                             : 0)
                     .build();
         }

@@ -79,12 +79,20 @@ public class FinanceService {
         // 11. 증분 이익 (baselineProfit 있을 때만)
         FinanceResponseDto.IncrementalDto incremental = null;
         if (req.getBaselineProfit() != null) {
-            long baselineProfit = req.getBaselineProfit().getCurrentMonthlyOperatingProfit();
+            long baselineProfit  = req.getBaselineProfit().getCurrentMonthlyOperatingProfit();
+            Long baselineRevenue = req.getBaselineProfit().getCurrentMonthlyRevenue();
+
+            // 기존 대비 증분값 (baseline과의 차이)
+            long additionalRevenue = baselineRevenue != null
+                    ? monthlyRevenue - baselineRevenue
+                    : monthlyRevenue;
+            long additionalProfit  = operatingProfit - baselineProfit;
+
             incremental = FinanceResponseDto.IncrementalDto.builder()
-                    .additionalRevenue(monthlyRevenue)
-                    .additionalOperatingProfit(operatingProfit)
+                    .additionalRevenue(additionalRevenue)
+                    .additionalOperatingProfit(additionalProfit)
                     .profitGrowthRate(baselineProfit > 0
-                            ? Math.round((double) operatingProfit / baselineProfit * 1000.0) / 1000.0
+                            ? Math.round((double) additionalProfit / baselineProfit * 1000.0) / 1000.0
                             : 0)
                     .build();
         }
