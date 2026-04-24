@@ -18,7 +18,7 @@ import java.nio.charset.StandardCharsets;
  *   - 엔드포인트: https://apis.data.go.kr/B553077/api/open/sdsc2/storeListInDong
  *   - 핵심 파라미터: ServiceKey, divId=adongCd, key=행정동코드, indsLclsCd=외식업 대분류(I2)
  *
- * ⚠ 응답은 pageNo/totalCount 구조이므로 totalCount 필드만 읽는다.
+ * 응답은 pageNo/totalCount 구조이므로 totalCount 필드만 읽는다.
  * 실패 시 0 반환 (B-6 Fallback 정책).
  */
 @Slf4j

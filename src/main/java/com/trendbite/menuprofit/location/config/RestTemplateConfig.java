@@ -10,7 +10,7 @@ import java.time.Duration;
 /**
  * 서울시/소진공 API 호출용 RestTemplate 빈 등록.
  *
- * 팀 전역에 이미 RestTemplate Bean이 존재한다면 본 Config 파일은 삭제할 것.
+ * 이미 RestTemplate Bean이 존재한다면 본 Config 파일은 삭제할 것.
  * (BeanDefinitionOverride 에러 방지)
  */
 @Configuration
