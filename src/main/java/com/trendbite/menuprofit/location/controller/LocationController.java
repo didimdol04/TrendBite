@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * 입지 분석 REST 컨트롤러.
  *
- * - POST /api/location/analyze
+ * - POST /api/v1/location/analyze
  *   Request : LocationAnalysisRequest (address, lat, lng)
  *   Response: LocationAnalysisResponse (locationInfo, rawMetrics, processedScores, finalResult)
  *
@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/location")
+@RequestMapping("/api/v1/location")
 @RequiredArgsConstructor
 public class LocationController {
 

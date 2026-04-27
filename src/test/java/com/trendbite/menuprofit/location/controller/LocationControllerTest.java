@@ -54,7 +54,7 @@ class LocationControllerTest {
         LocationAnalysisRequest body = new LocationAnalysisRequest(
                 "서울 성북구 안암동", 37.589, 127.032);
 
-        mockMvc.perform(post("/api/location/analyze")
+        mockMvc.perform(post("/api/v1/location/analyze")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk())
@@ -68,7 +68,7 @@ class LocationControllerTest {
     void testAnalyze_missingLat() throws Exception {
         String invalidBody = "{\"address\":\"서울\",\"lng\":127.0}";
 
-        mockMvc.perform(post("/api/location/analyze")
+        mockMvc.perform(post("/api/v1/location/analyze")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(invalidBody))
                 .andExpect(status().isBadRequest())
@@ -96,7 +96,7 @@ class LocationControllerTest {
         LocationAnalysisRequest body = new LocationAnalysisRequest(
                 "서울 강남구", 37.5, 127.0);
 
-        mockMvc.perform(post("/api/location/analyze")
+        mockMvc.perform(post("/api/v1/location/analyze")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(body)))
                 .andExpect(status().isOk())
