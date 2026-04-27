@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/simulation")
+@RequestMapping("/api/v1/simulation")
 @RequiredArgsConstructor
 public class SimulationController {
 
@@ -22,11 +22,6 @@ public class SimulationController {
     @PostMapping("/run")
     public ResponseEntity<SimulationResponseDto> run(
             @Valid @RequestBody SimulationRequestDto request) {
-        try {
-            SimulationResponseDto response = simulationService.simulate(request);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        return ResponseEntity.ok(simulationService.simulate(request));
     }
 }

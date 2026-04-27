@@ -37,7 +37,12 @@ public class SalesService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "메뉴를 찾을 수 없습니다. id=" + req.getMenuId()));
 
-        // TODO: 날짜 중복 체크 (ActualSales에 menu_id + sales_date Unique 제약 추가 후 활성화)
+        // 날짜 중복 체크 (동일 메뉴 + 동일 날짜 중복 등록 방지)
+        if (actualSalesRepository.existsByMenuIdAndSalesDate(req.getMenuId(), req.getSalesDate())) {
+            throw new IllegalArgumentException(
+                    "해당 날짜에 이미 판매 데이터가 존재합니다. menuId=" + req.getMenuId()
+                    + ", date=" + req.getSalesDate());
+        }
 
         ActualSales sales = new ActualSales();
         sales.setMenu(menu);

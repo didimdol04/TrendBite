@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/sales")
+@RequestMapping("/api/v1/sales")
 @RequiredArgsConstructor
 public class SalesController {
 
@@ -23,12 +23,7 @@ public class SalesController {
     @PostMapping("/record")
     public ResponseEntity<SalesRecordResponseDto> record(
             @Valid @RequestBody SalesRecordRequestDto request) {
-        try {
-            SalesRecordResponseDto response = salesService.record(request);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        return ResponseEntity.ok(salesService.record(request));
     }
 
     /**
@@ -38,14 +33,6 @@ public class SalesController {
     @GetMapping("/correction/{menuId}")
     public ResponseEntity<SalesCorrectionResponseDto> getCorrection(
             @PathVariable Long menuId) {
-        try {
-            SalesCorrectionResponseDto response = salesService.getCorrection(menuId);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.notFound().build();
-        } catch (IllegalStateException e) {
-            // 데이터 부족 (3일 미만)
-            return ResponseEntity.badRequest().build();
-        }
+        return ResponseEntity.ok(salesService.getCorrection(menuId));
     }
 }

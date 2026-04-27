@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/finance")
+@RequestMapping("/api/v1/finance")
 @RequiredArgsConstructor
 public class FinanceController {
 
@@ -22,11 +22,6 @@ public class FinanceController {
     @PostMapping("/calculate")
     public ResponseEntity<FinanceResponseDto> calculate(
             @Valid @RequestBody FinanceRequestDto request) {
-        try {
-            FinanceResponseDto response = financeService.calculate(request);
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().build();
-        }
+        return ResponseEntity.ok(financeService.calculate(request));
     }
 }
