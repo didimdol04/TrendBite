@@ -1,6 +1,7 @@
 package com.trendbite.menuprofit.global.exception;
 
 import com.trendbite.menuprofit.location.exception.LocationOutOfSeoulException;
+import com.trendbite.menuprofit.trend.exception.FastApiCallException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -37,6 +38,17 @@ public class GlobalExceptionHandler {
         body.put("error", "LOCATION_OUT_OF_SEOUL");
         body.put("message", e.getMessage());
         return ResponseEntity.badRequest().body(body);
+    }
+
+    /** FastAPI(트렌드/리포트) 호출 실패 — 503 Service Unavailable */
+    @ExceptionHandler(FastApiCallException.class)
+    public ResponseEntity<Map<String, Object>> handleFastApi(FastApiCallException e) {
+        log.error("[GlobalExceptionHandler] FastAPI 호출 실패: {}", e.getMessage(), e);
+        Map<String, Object> body = new HashMap<>();
+        body.put("success", false);
+        body.put("error", "TREND_SERVICE_UNAVAILABLE");
+        body.put("message", "트렌드 분석 서비스가 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.");
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
     }
 
     /** 그 외 예기치 않은 예외 — 로그 남기고 500 반환 */
