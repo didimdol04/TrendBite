@@ -1,7 +1,6 @@
 package com.trendbite.menuprofit.controller;
 
 import com.trendbite.menuprofit.dto.response.ErrorResponseDto;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -39,11 +38,4 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponseDto(message));
     }
 
-    /** 500 - 예상치 못한 서버 오류 */
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponseDto> handleException(Exception e) {
-        return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponseDto("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."));
-    }
 }
