@@ -32,15 +32,21 @@ import java.util.Optional;
  *  - 서울 외 좌표 / PIP 매핑 실패 → multiplier=1.0, grade=5, success=true, message 포함
  *  - API 호출 실패 개별 건은 각 Client가 기본값(0) 반환 → 계산은 계속 진행
  *
+ * <h3>v3 변경 사항 (round 2)</h3>
+ * <ul>
+ *   <li>(P2-1) {@code LocationCalculatorService.TRAFFIC_MIN} 등 상수 참조 대신
+ *              {@code normalizeTraffic/Sales/Competition} 인스턴스 메서드 사용 —
+ *              Min-Max 기준값이 LocationProperties로 외부화되어도 자동 반영됨.</li>
+ * </ul>
+ *
  * <h3>v2 변경 사항</h3>
  * <ul>
  *   <li>(P3-7) 정상 흐름 종료 직전 multiplier·grade·raw 데이터 일괄 로그</li>
  *   <li>(P4-1) {@link LocationCalculatorService#calculateFromScores(double, double, double)}로
  *              normalize 중복 호출(6→3) 제거</li>
  *   <li>(P0-4) {@link DataSourceStatus} 채워서 응답 — 휴리스틱(value &gt; 0)</li>
- *   <li>(P1-1) {@link AreaMapping}의 {@code nearestFallback}/{@code nearestDistanceMeters}
- *              {@link LocationInfoDto}로 전파</li>
- *   <li>(P2-2) {@code rawScore}→{@code normalizedScore}(0~1)·{@code displayScore}(0~100) 표시 추가</li>
+ *   <li>(P1-1) {@link AreaMapping}의 fallback 메타데이터 {@link LocationInfoDto}로 전파</li>
+ *   <li>(P2-2) {@code displayScore}(0~100) 표시 추가</li>
  * </ul>
  */
 @Slf4j
@@ -83,13 +89,10 @@ public class LocationAnalysisService {
                 .competitionCount(competitionCnt)
                 .build();
 
-        // (4) 계수 산출 — (P4-1) normalize 1회만 호출 (정규화된 값을 calculateFromScores에 직접 전달)
-        double trafficScore     = calculator.normalize(foottraffic,
-                LocationCalculatorService.TRAFFIC_MIN, LocationCalculatorService.TRAFFIC_MAX);
-        double salesScore       = calculator.normalize(avgMonthlySales,
-                LocationCalculatorService.SALES_MIN,   LocationCalculatorService.SALES_MAX);
-        double competitionScore = calculator.normalize(competitionCnt,
-                LocationCalculatorService.COMP_MIN,    LocationCalculatorService.COMP_MAX);
+        // (4) 계수 산출 — (P2-1) 인스턴스 메서드로 변경, properties 변경 시 자동 반영
+        double trafficScore     = calculator.normalizeTraffic(foottraffic);
+        double salesScore       = calculator.normalizeSales(avgMonthlySales);
+        double competitionScore = calculator.normalizeCompetition(competitionCnt);
         double rawScore   = calculator.calculateRawScore(trafficScore, salesScore, competitionScore);
         double multiplier = calculator.calculateFromScores(trafficScore, salesScore, competitionScore);
         int    grade      = calculator.calculateGrade(multiplier);
@@ -115,7 +118,7 @@ public class LocationAnalysisService {
                 round3(trafficScore), round3(salesScore), round3(competitionScore),
                 rawScore, multiplier, grade);
 
-        // (5) Response 조립 — (P1-1) fallback 메타 + (P0-4) dataSourceStatus + (P2-2) normalizedScore/displayScore
+        // (5) Response 조립
         return LocationAnalysisResponse.builder()
                 .success(true)
                 .data(DataDto.builder()
@@ -175,7 +178,7 @@ public class LocationAnalysisService {
                         .processedScores(ProcessedScoresDto.builder()
                                 .trafficScore(0.0).salesScore(0.0)
                                 .competitionScore(0.0).rawScore(0.0)
-                                .normalizedScore(0.2)   // (raw + 0.2)/1.0 = 0.2
+                                .normalizedScore(0.2)
                                 .displayScore(20)
                                 .build())
                         .finalResult(FinalResultDto.builder()
@@ -187,13 +190,7 @@ public class LocationAnalysisService {
                 .build();
     }
 
-    /**
-     * (P0-4) 휴리스틱 기반 외부 API 응답 상태 추정.
-     *
-     * <p>현재는 단순히 value &gt; 0이면 API 응답으로 간주.
-     * P0-1~P0-3 작업으로 SeoulApiClient/SogongongApiClient에서
-     * 명시적인 ApiCallResult를 반환하도록 리팩터링하면 정확도가 올라간다.
-     */
+    /** (P0-4) 휴리스틱 기반 외부 API 응답 상태 추정. */
     private DataSourceStatus buildDataSourceStatus(
             long foottraffic, long avgMonthlySales, int facilityCount, int competitionCount) {
         return DataSourceStatus.builder()
