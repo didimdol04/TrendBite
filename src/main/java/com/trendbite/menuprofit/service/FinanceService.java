@@ -66,15 +66,18 @@ public class FinanceService {
         double profitMargin = monthlyRevenue > 0
                 ? Math.round((double) operatingProfit / monthlyRevenue * 1000.0) / 1000.0 : 0;
         double foodCostRate = monthlyRevenue > 0
-                ? Math.round((double) (ingredientCost * expectedDailySales * monthlyWorkingDaysLong)
+                ? Math.round((double) ((long) ingredientCost * expectedDailySales * monthlyWorkingDaysLong)
                 / monthlyRevenue * 1000.0) / 1000.0 : 0;
 
         // 10. BEP (고정비 배분 적용)
+        // 공헌이익 <= 0이면 BEP 산출 불가 → null 반환 (Integer.MAX_VALUE 사용 시 long 오버플로우 발생)
         long allocatedFixedCost = calcAllocatedFixedCost(fixedCostTotal, monthlyRevenue, req);
-        int bepPerDay = contributionMargin > 0
+        Integer bepPerDay   = contributionMargin > 0
                 ? (int) Math.ceil((double) allocatedFixedCost / contributionMargin / monthlyWorkingDays)
-                : Integer.MAX_VALUE;
-        long bepRevenue = (long) bepPerDay * sellingPrice * monthlyWorkingDaysLong;
+                : null;
+        Long bepRevenue = bepPerDay != null
+                ? (long) bepPerDay * sellingPrice * monthlyWorkingDaysLong
+                : null;
 
         // 11. 증분 이익 (baselineProfit 있을 때만)
         FinanceResponseDto.IncrementalDto incremental = null;

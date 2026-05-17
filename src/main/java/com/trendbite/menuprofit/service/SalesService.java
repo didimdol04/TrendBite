@@ -17,7 +17,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SalesService {
 
-    private static final int MIN_DATA_DAYS = 3; // 보정값 신뢰 최소 데이터 수
+    private static final int    MIN_DATA_DAYS = 5;   // 보정값 신뢰 최소 데이터 수
+    private static final double EWMA_ALPHA    = 0.3; // EWMA 평활 계수 (0~1, 클수록 최신 데이터 가중치 증가)
 
     private final ActualSalesRepository actualSalesRepository;
     private final MenuRepository menuRepository;
@@ -85,11 +86,18 @@ public class SalesService {
                             + " (현재 " + salesList.size() + "일)");
         }
 
-        // TODO: 단순 평균 → EWMA(지수 가중 이동 평균)으로 개선 예정
-        double avgActualDailySales = salesList.stream()
+        // EWMA(지수 가중 이동 평균): 최근 데이터에 높은 가중치 부여
+        // 앞 절반의 단순 평균으로 초기화(워밍업) → 첫날 단일값 초기화 시 발생하는 초기 편향 완화
+        int warmUpSize = Math.max(1, salesList.size() / 2);
+        double ewma = salesList.stream()
+                .limit(warmUpSize)
                 .mapToInt(ActualSales::getActualQuantity)
                 .average()
                 .orElse(0);
+        for (int i = warmUpSize; i < salesList.size(); i++) {
+            ewma = EWMA_ALPHA * salesList.get(i).getActualQuantity() + (1 - EWMA_ALPHA) * ewma;
+        }
+        double avgActualDailySales = ewma;
 
         Menu menu = salesList.get(0).getMenu();
         int originalExpected = menu.getExpectedDailySales();

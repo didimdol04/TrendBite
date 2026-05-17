@@ -42,8 +42,8 @@ public class SimulationService {
                 ? Math.round((double) totalOperatingProfit / adjustedRevenue * 1000.0) / 1000.0
                 : 0;
 
-        // 6. BEP (기존 그대로 유지)
-        int breakEvenQuantity = finance.getBreakEven().getBreakEvenQuantityPerDay();
+        // 6. BEP — null 가능 (공헌이익 <= 0이면 FinanceService가 null 반환)
+        Integer breakEvenQuantity = finance.getBreakEven().getBreakEvenQuantityPerDay();
 
         // 7. 운영 부담 지수 (trendDurationWeeks 0 방어)
         double operationBurdenIndex = calcBurdenIndex(req);
