@@ -12,8 +12,8 @@ public class SimilarPattern {
 
     private String name;
 
-    @JsonProperty("cosine_sim")
-    private Double cosineSim;
+    @JsonProperty("dtw_similarity")
+    private Double dtwSimilarity;
 
     @JsonProperty("dtw_dist")
     private Double dtwDist;

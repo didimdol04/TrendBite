@@ -1,6 +1,8 @@
 package com.trendbite.menuprofit.trend.controller;
 
+import com.trendbite.menuprofit.trend.dto.Lifecycle;
 import com.trendbite.menuprofit.trend.dto.request.TrendRequest;
+import com.trendbite.menuprofit.trend.dto.response.LifecycleResponse;
 import com.trendbite.menuprofit.trend.dto.response.TrendKeywordResponse;
 import com.trendbite.menuprofit.trend.dto.response.TrendPatternResponse;
 import com.trendbite.menuprofit.trend.dto.response.TrendResponse;
@@ -10,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Arrays;
 import java.util.List;
 
 @RestController
@@ -44,6 +47,18 @@ public class TrendController {
     public ResponseEntity<List<TrendPatternResponse>> patterns() {
         List<TrendPatternResponse> body = trendService.getAllPatterns().stream()
                 .map(TrendPatternResponse::from)
+                .toList();
+        return ResponseEntity.ok(body);
+    }
+
+    /**
+     * GET /api/v1/trend/lifecycles — 프론트 라벨/색상 매핑용.
+     * trend analyze 응답의 lifecycle 한글값을 name 키로 매칭해서 사용.
+     */
+    @GetMapping("/lifecycles")
+    public ResponseEntity<List<LifecycleResponse>> lifecycles() {
+        List<LifecycleResponse> body = Arrays.stream(Lifecycle.values())
+                .map(LifecycleResponse::from)
                 .toList();
         return ResponseEntity.ok(body);
     }
