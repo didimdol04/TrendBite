@@ -18,25 +18,22 @@ import java.util.Optional;
 /**
  * (P5-2) Kakao Geocoding API 클라이언트 — 백엔드 옵션 (스켈레톤).
  *
- * <h3>현재 사용 안 함</h3>
+ * 현재 사용 안 함
  * 프론트엔드가 Kakao Postcode/Geocoder로 좌표를 받아 백엔드에 전송하는 방식이 기본 흐름.
  * 본 클라이언트는 보안 + 일관성을 위해 백엔드에서 직접 변환하는 옵션으로 제공.
  *
- * <h3>활성화 조건</h3>
- * <ul>
- *   <li>{@code kakao.api.rest-key} 환경변수 설정 (Kakao Developers 콘솔에서 발급)</li>
- *   <li>{@link com.trendbite.menuprofit.location.controller.LocationController}에서
- *       address-only 요청을 받을 때 호출하도록 변경</li>
- * </ul>
+ * 활성화 조건
+ * 
+ *   {@code kakao.api.rest-key} 환경변수 설정 (Kakao Developers 콘솔에서 발급)
+ *   {@link com.trendbite.menuprofit.location.controller.LocationController}에서
+ *       address-only 요청을 받을 때 호출하도록 변경
+ * 
  *
- * <h3>장단점</h3>
- * <ul>
- *   <li>👍 프론트의 Kakao 키 노출 없음 + 백엔드 단일 책임</li>
- *   <li>👎 백엔드 1회 추가 HTTP 호출 → 응답 지연 (~200ms)</li>
- *   <li>👎 Kakao API 일일 할당량 백엔드 단일 키로 통합 — 트래픽 증가 시 분산 어려움</li>
- * </ul>
- *
- * <p>도입 전 김수현/황예원과 합의 필요.
+ * 장단점
+ *   프론트의 Kakao 키 노출 없음 + 백엔드 단일 책임
+ *   백엔드 1회 추가 HTTP 호출 → 응답 지연 (~200ms)
+ *   Kakao API 일일 할당량 백엔드 단일 키로 통합 — 트래픽 증가 시 분산 어려움
+ * 
  */
 @Slf4j
 @Component

@@ -14,16 +14,16 @@ import org.springframework.stereotype.Service;
  *   raw = 0.4 * t + 0.4 * s - 0.2 * c          (이론 범위 -0.2 ~ 0.8)
  *   multiplier = 0.8 + 0.4 * ((raw + 0.2) / 1.0)  (이론 범위 0.8 ~ 1.2)
  *
- * <h3>v3 변경 사항 (round 2)</h3>
- * <ul>
- *   <li>(P2-1) Min-Max 기준값을 {@link LocationProperties}로 외부화.
- *              기존 {@code static final TRAFFIC_MIN/MAX} 등은 {@code @Deprecated} 상태로 호환성 유지.</li>
- *   <li>(P2-1) {@link #normalizeTraffic(long)}, {@link #normalizeSales(long)},
- *              {@link #normalizeCompetition(int)} 도메인 편의 메서드 추가 (인스턴스 필드 사용).</li>
- *   <li>가중치(WEIGHT_*)와 결과 범위(MULTIPLIER_MIN/MAX)는 계산 공식 자체이므로 상수 유지.</li>
- * </ul>
+ * v3 변경 사항 (round 2)
+ * 
+ *   (P2-1) Min-Max 기준값을 {@link LocationProperties}로 외부화.
+ *              기존 {@code static final TRAFFIC_MIN/MAX} 등은 {@code @Deprecated} 상태로 호환성 유지
+ *   (P2-1) {@link #normalizeTraffic(long)}, {@link #normalizeSales(long)},
+ *              {@link #normalizeCompetition(int)} 도메인 편의 메서드 추가 (인스턴스 필드 사용)
+ *   가중치(WEIGHT_*)와 결과 범위(MULTIPLIER_MIN/MAX)는 계산 공식 자체이므로 상수 유지
+ * 
  *
- * <h3>v2 (P4-1, 이전 라운드)</h3>
+ * v2 (P4-1, 이전 라운드)
  * {@link #calculateFromScores(double, double, double)}로 normalize 중복 호출 제거.
  */
 @Service
@@ -61,7 +61,7 @@ public class LocationCalculatorService {
 
     /**
      * (P2-1) Spring DI 생성자 — {@link LocationProperties}에서 Min-Max 기준값 주입.
-     * <p>application.properties에 키가 없으면 LocationProperties 필드 초기화의 기본값(명세 v2.0 추정치)이 사용된다.
+     * application.properties에 키가 없으면 LocationProperties 필드 초기화의 기본값(명세 v2.0 추정치)이 사용된다.
      */
     @Autowired
     public LocationCalculatorService(LocationProperties props) {

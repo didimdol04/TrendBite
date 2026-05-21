@@ -35,18 +35,18 @@ import java.util.concurrent.atomic.AtomicReference;
  *  2. 캐시 이후 매 요청은 in-memory 순회만 수행 (약 1650+400개 polygon contains 체크).
  *  3. buffer(10)을 사용해 경계선 오차 10m 범위까지 포함.
  *
- * <h3>v3 변경 사항 (round 2)</h3>
- * <ul>
- *   <li>(P3-1) {@link #invalidateCache()}, {@link #invalidateAndRebuild()} 추가 —
+ * v3 변경 사항 (round 2)
+ * 
+ *   (P3-1) {@link #invalidateCache()}, {@link #invalidateAndRebuild()} 추가 —
  *              GeoJSON 데이터 갱신 시 서버 재기동 없이 캐시 새로고침 가능
- *              ({@link com.trendbite.menuprofit.location.controller.LocationAdminController}에서 노출).</li>
- * </ul>
+ *              ({@link com.trendbite.menuprofit.location.controller.LocationAdminController}에서 노출).
+ * 
  *
- * <h3>v2 변경 사항</h3>
- * <ul>
- *   <li>(P1-3) {@link #warmUpCache()} — ApplicationReadyEvent 시점 사전 빌드</li>
- *   <li>(P1-1) {@link AreaMapping#isNearestFallback()}, distance 정보 반환</li>
- * </ul>
+ * v2 변경 사항
+ * 
+ *   (P1-3) {@link #warmUpCache()} — ApplicationReadyEvent 시점 사전 빌드
+ *   (P1-1) {@link AreaMapping#isNearestFallback()}, distance 정보 반환
+ * 
  */
 @Slf4j
 @Service

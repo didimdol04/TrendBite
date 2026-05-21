@@ -13,7 +13,7 @@ import java.util.Map;
 /**
  * 글로벌 예외 핸들러.
  *
- * <h3>v2 (P3-4): {@code LocationOutOfSeoulException} 핸들러 제거</h3>
+ * v2 (P3-4): {@code LocationOutOfSeoulException} 핸들러 제거
  * 해당 예외는 어디서도 throw 되지 않는 dead code였고,
  * 입지 분석 모듈은 "서울 외 좌표는 200 + multiplier=1.0 fallback" 정책을 유지하므로
  * 예외 클래스를 삭제하면서 이 핸들러도 함께 정리.
