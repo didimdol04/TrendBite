@@ -1,0 +1,152 @@
+/* TrendBite Frontend Demo — globals.css
+   디자인 토큰은 와이어프레임 초안과 1:1 일치 */
+
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --tb-navy: #1A2A6C;
+  --tb-navy-2: #243B7E;
+  --tb-navy-soft: #E8ECF7;
+  --tb-amber: #E0A800;
+  --tb-amber-soft: #FFF4D4;
+  --tb-bg: #FFFFFF;
+  --tb-canvas: #F5F7FA;
+  --tb-line: #D8DDE6;
+  --tb-line-2: #E8EBF0;
+  --tb-ink: #1F2937;
+  --tb-ink-2: #4B5563;
+  --tb-ink-3: #6B7280;
+  --tb-ink-4: #9CA3AF;
+  --tb-placeholder: #ECEFF4;
+
+  --tb-success: #16A085;
+  --tb-warning: #E0A800;
+  --tb-danger:  #C44545;
+
+  --tb-radius: 10px;
+  --tb-radius-sm: 6px;
+
+  --tb-font:        'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --tb-font-sketch: 'Caveat', 'Pretendard Variable', cursive;
+  --tb-font-mono:   'JetBrains Mono', ui-monospace, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--tb-font);
+  color: var(--tb-ink);
+  background: var(--tb-canvas);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+a { color: inherit; text-decoration: none; }
+
+/* ===== 와이어프레임 primitives ===== */
+.wf-h1     { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; color: var(--tb-ink); margin: 0; }
+.wf-h2     { font-size: 18px; font-weight: 700; letter-spacing: -0.01em; margin: 0; }
+.wf-h3     { font-size: 14px; font-weight: 600; letter-spacing: -0.005em; margin: 0; }
+.wf-eyebrow{ font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--tb-navy); }
+.wf-muted  { color: var(--tb-ink-3); }
+.wf-mono   { font-family: var(--tb-font-mono); font-size: 11px; color: var(--tb-ink-3); }
+
+.wf-box        { background: #fff; border: 1px solid var(--tb-line); border-radius: var(--tb-radius); }
+.wf-box-dashed { background: #fff; border: 1.5px dashed var(--tb-line); border-radius: var(--tb-radius); }
+
+.wf-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  border: 1px solid var(--tb-line); border-radius: 999px;
+  font-size: 11.5px; color: var(--tb-ink-2);
+  background: #fff; white-space: nowrap;
+}
+.wf-chip-navy  { background: var(--tb-navy-soft); border-color: transparent; color: var(--tb-navy); font-weight: 600; }
+.wf-chip-amber { background: var(--tb-amber-soft); border-color: transparent; color: #806100; font-weight: 600; }
+
+.wf-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 36px; padding: 0 14px;
+  border: 1px solid var(--tb-line); background: #fff; border-radius: var(--tb-radius-sm);
+  font-size: 12.5px; color: var(--tb-ink); font-weight: 500;
+  transition: background 0.15s;
+}
+.wf-btn:hover { background: var(--tb-canvas); }
+.wf-btn-primary { background: var(--tb-navy); border-color: var(--tb-navy); color: #fff; font-weight: 600; }
+.wf-btn-primary:hover { background: var(--tb-navy-2); }
+.wf-btn-lg { height: 48px; padding: 0 22px; font-size: 14px; }
+.wf-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+.wf-input {
+  height: 38px;
+  border: 1px solid var(--tb-line); border-radius: var(--tb-radius-sm);
+  padding: 0 12px;
+  font-size: 12.5px; color: var(--tb-ink);
+  background: #fff;
+  width: 100%;
+  outline: none;
+}
+.wf-input::placeholder { color: var(--tb-ink-4); }
+.wf-input:focus { border-color: var(--tb-navy); box-shadow: 0 0 0 3px rgba(26, 42, 108, 0.08); }
+.wf-input-lg { height: 44px; font-size: 13.5px; }
+
+.wf-field-label { font-size: 11.5px; font-weight: 600; color: var(--tb-ink-2); margin-bottom: 6px; display: block; }
+
+.wf-progress-track { height: 6px; background: var(--tb-line-2); border-radius: 999px; overflow: hidden; }
+.wf-progress-fill  { height: 100%; background: var(--tb-navy); border-radius: 999px; transition: width 0.25s; }
+
+.wf-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px;
+  font-size: 11px; font-weight: 600;
+  background: var(--tb-navy-soft); color: var(--tb-navy);
+}
+.wf-badge-amber { background: var(--tb-amber-soft); color: #806100; }
+.wf-badge-grey  { background: #EEF1F5; color: var(--tb-ink-2); }
+.wf-badge-dark  { background: #2A2F3A; color: #fff; }
+.wf-badge-danger{ background: #FCE7E7; color: var(--tb-danger); }
+.wf-badge-success{ background: #DCF5EE; color: var(--tb-success); }
+
+/* sketch chart colors */
+.sketch-axis { stroke: var(--tb-ink-3); stroke-width: 1.2; fill: none; }
+.sketch-line { stroke: var(--tb-navy); stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.sketch-fill { fill: var(--tb-navy-soft); }
+.sketch-marker { fill: var(--tb-amber); stroke: #fff; stroke-width: 2; }
+.sketch-grid { stroke: var(--tb-line-2); stroke-width: 1; }
+.sketch { font-family: var(--tb-font-sketch); color: var(--tb-ink-2); }
+
+/* "합의 필요" 마커 — 데모에서 미결정 영역 표시용 */
+.pending-marker {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
+  background: #FFF4D4; color: #806100;
+  border: 1px dashed #E0A800; border-radius: 4px;
+  font-size: 10.5px; font-weight: 600;
+  font-family: var(--tb-font-mono);
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}
+.pending-box {
+  border: 1.5px dashed #E0A800;
+  background: rgba(255, 244, 212, 0.4);
+  border-radius: var(--tb-radius);
+  padding: 12px 14px;
+  font-size: 12px;
+  color: #806100;
+}
+
+/* layout helpers */
+.tb-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--tb-canvas); }
+.tb-main { flex: 1; }
+
+/* responsive */
+@media (max-width: 768px) {
+  .wf-h1 { font-size: 22px; }
+  .hide-mobile { display: none !important; }
+}
+@media (min-width: 769px) {
+  .hide-desktop { display: none !important; }
+}
