@@ -15,22 +15,19 @@ import java.util.Map;
 /**
  * (P3-1) 입지 도메인 관리자용 컨트롤러.
  *
- * <p>운영 중에 GeoJSON 데이터가 갱신됐을 때 서버 재기동 없이 PIP 캐시를 새로고침하기 위한 엔드포인트.
+ * 운영 중에 GeoJSON 데이터가 갱신됐을 때 서버 재기동 없이 PIP 캐시를 새로고침하기 위한 엔드포인트.
  * GeoJSON은 보통 연 1~2회만 변경되므로 일상적 사용은 아니며, 데이터 업데이트 직후에만 호출.
  *
- * <p>현재는 인증 없이 노출되어 있으나, 운영 환경에서는 다음 중 하나로 보호 권장:
- * <ul>
- *   <li>Spring Security로 ADMIN 역할 제한</li>
- *   <li>Nginx/Gateway 레벨에서 IP whitelist</li>
- *   <li>관리자 API Key 헤더 검증 인터셉터</li>
- * </ul>
+ * 현재는 인증 없이 노출되어 있으나, 운영 환경에서는 다음 중 하나로 보호 권장:
+ *   Spring Security로 ADMIN 역할 제한
+ *   Nginx/Gateway 레벨에서 IP whitelist
+ *   관리자 API Key 헤더 검증 인터셉터
  *
- * <h3>API</h3>
- * <pre>
+ * API
  * POST /api/v1/admin/location/cache/invalidate?rebuild=false
  *   - rebuild=false (기본): 캐시만 비움 — 다음 요청에서 lazy 빌드 (~5초 지연 발생)
  *   - rebuild=true:  비운 직후 즉시 재빌드 — 사용자 요청에 영향 없음
- * </pre>
+ * 
  */
 @Slf4j
 @RestController

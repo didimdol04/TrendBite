@@ -22,12 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
  * 핵심 응답 필드: data.finalResult.locationMultiplier (Double, 0.80~1.20)
  * 이 값이 /simulation/run SimulationRequestDto.locationScore 로 전달된다.
  *
- * <h3>v3 변경 사항 (round 2)</h3>
- * <ul>
- *   <li>(P4-3) {@code IllegalArgumentException} catch 제거 → {@code GlobalExceptionHandler}로 위임
+ * v3 변경 사항 (round 2)
+ * 
+ *   (P4-3) {@code IllegalArgumentException} catch 제거 → {@code GlobalExceptionHandler}로 위임
  *              (다른 컨트롤러와 응답 형식 일관성 확보 — 표준 {success:false, error:"BAD_REQUEST"} 본문 반환).
- *              {@code Exception} catch는 fallback 정책상 그대로 유지.</li>
- * </ul>
+ *              {@code Exception} catch는 fallback 정책상 그대로 유지.
+ * 
  */
 @Slf4j
 @RestController

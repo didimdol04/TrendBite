@@ -25,13 +25,13 @@ import java.nio.charset.StandardCharsets;
  *     - pageNo       : 1
  *     - type         : "json"
  *
- * <h3>v3 변경 사항 (round 2)</h3>
- * <ul>
- *   <li>(P0-3) resultCode별 분기 처리 강화 - 정상(00) / NODATA(03) / 시스템 에러(99) 등 명시적 분류</li>
- *   <li>(P0-3) raw response 일부를 DEBUG로 출력 (실제 응답 구조 확인용)</li>
- *   <li>(P0-3) signguCd fallback 결과 명시적 INFO 로그 (이전에는 silent fail이라 디버깅 어려움)</li>
- *   <li>(P4-2) 생성자에 {@code @Qualifier("restTemplate")} 명시</li>
- * </ul>
+ * v3 변경 사항 (round 2)
+ * 
+ *   (P0-3) resultCode별 분기 처리 강화 - 정상(00) / NODATA(03) / 시스템 에러(99) 등 명시적 분류
+ *   (P0-3) raw response 일부를 DEBUG로 출력 (실제 응답 구조 확인용)
+ *   (P0-3) signguCd fallback 결과 명시적 INFO 로그 (이전에는 silent fail이라 디버깅 어려움)
+ *   (P4-2) 생성자에 {@code @Qualifier("restTemplate")} 명시
+ * 
  */
 @Slf4j
 @Component
@@ -64,7 +64,7 @@ public class SogongongApiClient {
     /**
      * 행정동 코드로 외식업(I2) 경쟁 점포 수 조회.
      * 응답의 body.totalCount 값 반환.
-     * <p>
+     * 
      * 1차: adongCd로 행정동 단위 조회
      * 2차: 결과 없거나 0이면 signguCd로 시군구 단위 fallback (행정동 코드 앞 5자리)
      */

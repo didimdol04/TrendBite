@@ -13,7 +13,7 @@ import lombok.Setter;
  *
  * 프론트엔드에서 Kakao Postcode → Geocoder로 WGS84 좌표를 획득한 뒤 전송한다.
  *
- * <h3>v2 (P1-4): lat/lng 범위 검증 추가</h3>
+ * v2 (P1-4): lat/lng 범위 검증 추가
  * 비정상 값({@code lat=200} 등) 입력 시 즉시 400 응답을 반환하여
  * proj4j 변환 → PIP 매칭 실패 → fallback 흐름까지 도달하지 않게 한다.
  * 좌표 오타(lat/lng 순서 뒤바뀜)도 빠르게 감지된다.

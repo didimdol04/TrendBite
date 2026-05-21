@@ -17,15 +17,15 @@ import java.util.Iterator;
  *  2. 추정매출-행정동 (fetchAvgMonthlySales) — 행정동 코드(ADSTRD_CD)로 필터
  *  3. 집객시설-상권   (fetchFacilityCount)  — 상권 코드(TRDAR_CD)로 필터
  *
- * <h3>v3 변경 사항 (round 2)</h3>
- * <ul>
- *   <li>(P0-1) {@link #fetchFootTraffic(String)} - 진단용 첫 row 필드 덤프 + 4개 후보 필드 순차 시도</li>
- *   <li>(P0-2) {@link #fetchAvgMonthlySales(String)} - 페이지네이션 추가 (최대 5,000건까지 조회)</li>
- *   <li>(P0-2b) {@link #fetchAvgMonthlySales(String)} - {@link #isFoodIndustry(String)} 필터 실제 호출
- *       (기존에는 정의만 되고 미사용이라 모든 업종 매출이 합산되던 문제 해결)</li>
- *   <li>(P4-2) 생성자에 {@code @Qualifier("restTemplate")} 명시
- *       — 트렌드 도메인의 fastApiRestTemplate 빈과 모호성 제거 (timeout 5/10s 보장)</li>
- * </ul>
+ * v3 변경 사항 (round 2)
+ * 
+ *   (P0-1) {@link #fetchFootTraffic(String)} - 진단용 첫 row 필드 덤프 + 4개 후보 필드 순차 시도
+ *   (P0-2) {@link #fetchAvgMonthlySales(String)} - 페이지네이션 추가 (최대 5,000건까지 조회)
+ *   (P0-2b) {@link #fetchAvgMonthlySales(String)} - {@link #isFoodIndustry(String)} 필터 실제 호출
+ *       (기존에는 정의만 되고 미사용이라 모든 업종 매출이 합산되던 문제 해결)
+ *   (P4-2) 생성자에 {@code @Qualifier("restTemplate")} 명시
+ *       — 트렌드 도메인의 fastApiRestTemplate 빈과 모호성 제거 (timeout 5/10s 보장)
+ * 
  *
  * 모든 예외는 흡수하여 기본값(0)을 반환한다 (B-6 Fallback 정책).
  */
@@ -75,7 +75,7 @@ public class SeoulApiClient {
 
     /**
      * 상권 코드로 일 유동인구 조회.
-     * <p>
+     *
      * (P0-1) 4개 후보 필드를 순차 시도하여 명세서 버전 차이에 대응.
      * 첫 매칭 row의 모든 필드명을 디버그 로그로 덤프하여 운영 환경에서도 응답 구조 파악 가능.
      */
@@ -116,13 +116,13 @@ public class SeoulApiClient {
 
     /**
      * 행정동 코드로 월 추정매출(원) 조회.
-     * <p>
+     * 
      * 같은 행정동 + 같은 분기에는 업종(SVC_INDUTY_CD)별로 여러 row가 있으므로
      * 외식업 관련 업종 row들의 THSMON_SELNG_AMT를 합산한다.
-     * <p>
+     *
      * (P0-2) 페이지네이션 적용 — 1~1000, 1001~2000, ... 최대 5,000건까지 조회.
      * 이전에는 1~1000만 조회하여 가나다순 후순위 행정동(예: 안암동)이 누락되는 문제가 있었음.
-     * <p>
+     * 
      * (P0-2b) {@link #isFoodIndustry(String)} 필터 호출을 추가하여 외식업 매출만 합산.
      * 이전에는 행정동+분기만 매칭해서 편의점/학원/미용실 매출까지 모두 합산되던 버그.
      */
