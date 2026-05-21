@@ -1,6 +1,5 @@
 package com.trendbite.menuprofit.global.exception;
 
-import com.trendbite.menuprofit.location.exception.LocationOutOfSeoulException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,11 +10,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * 글로벌 예외 핸들러.
+ *
+ * <h3>v2 (P3-4): {@code LocationOutOfSeoulException} 핸들러 제거</h3>
+ * 해당 예외는 어디서도 throw 되지 않는 dead code였고,
+ * 입지 분석 모듈은 "서울 외 좌표는 200 + multiplier=1.0 fallback" 정책을 유지하므로
+ * 예외 클래스를 삭제하면서 이 핸들러도 함께 정리.
+ */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /** 400 - @Valid 검증 실패 (null lat/lng 등) */
+    /** 400 - @Valid 검증 실패 (null lat/lng, 좌표 범위 위반 등) */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException e) {
         Map<String, String> fieldErrors = new HashMap<>();
@@ -34,12 +41,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException e) {
         return ResponseEntity.unprocessableEntity().body(buildBody("UNPROCESSABLE_ENTITY", e.getMessage()));
-    }
-
-    /** 400 - 서울 외 좌표 (정책 변경 시 활성화) */
-    @ExceptionHandler(LocationOutOfSeoulException.class)
-    public ResponseEntity<Map<String, Object>> handleOutOfSeoul(LocationOutOfSeoulException e) {
-        return ResponseEntity.badRequest().body(buildBody("LOCATION_OUT_OF_SEOUL", e.getMessage()));
     }
 
     /** 500 - 예기치 않은 예외 */
