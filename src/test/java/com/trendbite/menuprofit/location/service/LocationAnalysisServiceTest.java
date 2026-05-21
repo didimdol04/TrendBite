@@ -5,6 +5,8 @@ import com.trendbite.menuprofit.location.client.SogongongApiClient;
 import com.trendbite.menuprofit.location.dto.AreaMapping;
 import com.trendbite.menuprofit.location.dto.request.LocationAnalysisRequest;
 import com.trendbite.menuprofit.location.dto.response.LocationAnalysisResponse;
+import com.trendbite.menuprofit.location.entity.SaleStat;
+import com.trendbite.menuprofit.location.repository.SaleStatRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -22,8 +24,11 @@ import static org.mockito.BDDMockito.given;
 /**
  * LocationAnalysisService 단위 테스트.
  *
- * 외부 API 클라이언트와 PIP 서비스는 모두 Mockito로 mock한다.
+ * 외부 API 클라이언트, PIP 서비스, SaleStatRepository는 모두 Mockito로 mock.
  * LocationCalculatorService는 실제 구현을 사용한다 (순수 계산 로직이므로).
+ *
+ * v4 변경: fetchAvgMonthlySales(dongCode) 실시간 호출 →
+ *          saleStatRepository.findById(dongCode) DB 조회로 전환됨에 따라 mock 대상 변경.
  */
 @ExtendWith(MockitoExtension.class)
 class LocationAnalysisServiceTest {
@@ -31,6 +36,7 @@ class LocationAnalysisServiceTest {
     @Mock private PipMappingService   pipMappingService;
     @Mock private SeoulApiClient      seoulApiClient;
     @Mock private SogongongApiClient  sogongongApiClient;
+    @Mock private SaleStatRepository  saleStatRepository;
 
     @InjectMocks private LocationAnalysisService service;
 
@@ -61,9 +67,11 @@ class LocationAnalysisServiceTest {
                 .willReturn(Optional.of(new AreaMapping(
                         "1111055", "안암역_1", "1111055000", "안암동")));
         given(seoulApiClient.fetchFootTraffic(anyString())).willReturn(25_000L);
-        given(seoulApiClient.fetchAvgMonthlySales(anyString())).willReturn(35_000_000L);
         given(seoulApiClient.fetchFacilityCount(anyString())).willReturn(12);
         given(sogongongApiClient.fetchCompetitionCount(anyString())).willReturn(18);
+        // 추정매출: DB 조회 mock (기존 seoulApiClient.fetchAvgMonthlySales 대신)
+        given(saleStatRepository.findById(anyString()))
+                .willReturn(Optional.of(SaleStat.builder().foodMonthlySales(35_000_000L).build()));
 
         LocationAnalysisResponse res = service.analyze(
                 new LocationAnalysisRequest("서울 성북구 안암동", 37.589, 127.032));
@@ -82,9 +90,10 @@ class LocationAnalysisServiceTest {
         given(pipMappingService.findAreaByCoord(anyDouble(), anyDouble()))
                 .willReturn(Optional.of(new AreaMapping("X", "X", "Y", "Y")));
         given(seoulApiClient.fetchFootTraffic(anyString())).willReturn(0L);
-        given(seoulApiClient.fetchAvgMonthlySales(anyString())).willReturn(0L);
         given(seoulApiClient.fetchFacilityCount(anyString())).willReturn(0);
         given(sogongongApiClient.fetchCompetitionCount(anyString())).willReturn(0);
+        // 추정매출: DB에 데이터 없음 (적재 전 또는 해당 동 미존재)
+        given(saleStatRepository.findById(anyString())).willReturn(Optional.empty());
 
         LocationAnalysisResponse res = service.analyze(
                 new LocationAnalysisRequest("서울 어딘가", 37.5, 127.0));

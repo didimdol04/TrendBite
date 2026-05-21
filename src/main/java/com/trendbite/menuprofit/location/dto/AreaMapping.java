@@ -11,11 +11,11 @@ import lombok.Setter;
  *
  * 특정 좌표에 해당하는 상권 코드(+이름) + 행정동 코드(+이름)를 담는다.
  *
- * <h3>v2 (P1-1): fallback 메타데이터 추가</h3>
- * <ul>
- *   <li>{@code nearestFallback}: PIP 정타가 아닌 최근접 폴리곤 fallback이었는지 표시</li>
- *   <li>{@code nearestDistanceMeters}: fallback 시 폴리곤까지 거리 (EPSG:5181 단위 = 미터)</li>
- * </ul>
+ * v2 (P1-1): fallback 메타데이터 추가
+ * 
+ *   {@code nearestFallback}: PIP 정타가 아닌 최근접 폴리곤 fallback이었는지 표시
+ *   {@code nearestDistanceMeters}: fallback 시 폴리곤까지 거리 (EPSG:5181 단위 = 미터)
+ *
  * 이 정보는 LocationInfoDto로 전파되어 프론트가
  * "약 OOOm 떨어진 인근 상권 데이터 기반 추정값" 같은 안내를 사용자에게 노출하는 데 사용된다.
  */
@@ -33,10 +33,10 @@ public class AreaMapping {
 
     /**
      * 상권이 PIP 정타로 매칭되지 않고 반경 fallback으로 결정됐는지 여부.
-     * <ul>
-     *     <li>{@code false}: 좌표가 폴리곤 내부에 있어 정확히 매칭됨</li>
-     *     <li>{@code true}:  폴리곤 외부 좌표 → 반경 2km 최근접 상권 사용</li>
-     * </ul>
+     * 
+     *     {@code false}: 좌표가 폴리곤 내부에 있어 정확히 매칭됨
+     *     {@code true}:  폴리곤 외부 좌표 → 반경 2km 최근접 상권 사용
+     * 
      */
     private boolean nearestFallback;
 

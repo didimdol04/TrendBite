@@ -15,12 +15,12 @@ import org.springframework.stereotype.Component;
  *
  * 이미 적재된 경우 skip (테이블에 데이터 있으면 재실행하지 않음).
  *
- * <h3>v2 (P3-6): 트랜잭션 분리</h3>
- * <p>이전 버전은 본 클래스 내에서 두 seed를 하나의 {@code @Transactional}로 처리했으나,
+ * v2 (P3-6): 트랜잭션 분리
+ * 이전 버전은 본 클래스 내에서 두 seed를 하나의 {@code @Transactional}로 처리했으나,
  * 첫 seed가 부분 실패(WKT 파싱 등)로 트랜잭션 mark-as-rollback 상태가 되면 두 번째 seed의
  * {@code saveAll}에서 {@code UnexpectedRollbackException}이 발생할 위험이 있었다.
  *
- * <p>이를 해결하기 위해 실제 트랜잭션 처리는 {@link GeoSeedService}로 위임하고,
+ * 이를 해결하기 위해 실제 트랜잭션 처리는 {@link GeoSeedService}로 위임하고,
  * 두 seed 메서드는 각각 {@code REQUIRES_NEW}로 독립 실행되도록 변경했다.
  * 본 클래스는 단순 {@link CommandLineRunner} 진입점 역할만 한다.
  */
