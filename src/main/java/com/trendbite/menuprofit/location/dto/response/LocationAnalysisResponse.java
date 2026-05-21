@@ -14,12 +14,12 @@ import lombok.NoArgsConstructor;
  *
  * 핵심 필드: data.finalResult.locationMultiplier — /simulation/run의 locationScore로 전달됨.
  *
- * <h3>v2 변경 사항</h3>
- * <ul>
- *   <li>(P0-4) {@link RawMetricsDto} 안에 {@link DataSourceStatus} 추가 — 어느 외부 API가 정상 응답했는지 표시</li>
- *   <li>(P1-1) {@link LocationInfoDto}에 {@code nearestFallback}, {@code nearestDistanceMeters} 추가</li>
- *   <li>(P2-2) {@link ProcessedScoresDto}에 {@code normalizedScore}(0~1), {@code displayScore}(0~100) 추가</li>
- * </ul>
+ * v2 변경 사항
+ * 
+ *   (P0-4) {@link RawMetricsDto} 안에 {@link DataSourceStatus} 추가 — 어느 외부 API가 정상 응답했는지 표시
+ *   (P1-1) {@link LocationInfoDto}에 {@code nearestFallback}, {@code nearestDistanceMeters} 추가
+ *   (P2-2) {@link ProcessedScoresDto}에 {@code normalizedScore}(0~1), {@code displayScore}(0~100) 추가
+ * 
  */
 @Getter @Builder @NoArgsConstructor @AllArgsConstructor
 public class LocationAnalysisResponse {
@@ -82,12 +82,12 @@ public class LocationAnalysisResponse {
 
     /**
      * 외부 API 호출 결과 상태 표시.
-     * <p>
+     * 
      * 휴리스틱 정의:
-     * <ul>
-     *   <li>{@code true}  — value &gt; 0 (응답 받았음)</li>
-     *   <li>{@code null}  — value == 0 (응답이 0인지, API 실패인지 현재 단계에서는 구분 불가)</li>
-     * </ul>
+     * 
+     *   {@code true}  — value &gt; 0 (응답 받았음)
+     *   {@code null}  — value == 0 (응답이 0인지, API 실패인지 현재 단계에서는 구분 불가)
+     * 
      * P0-1~P0-3 작업 후 명시적 boolean(true/false)로 정확화 예정.
      */
     @Getter @Builder @NoArgsConstructor @AllArgsConstructor

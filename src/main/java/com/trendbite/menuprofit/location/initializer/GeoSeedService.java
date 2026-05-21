@@ -26,11 +26,11 @@ import java.util.List;
 /**
  * GeoJSON → DB Seed 트랜잭션 처리 빈.
  *
- * <p>(P3-6) {@code GeoDataSeedInitializer}에서 분리.
+ * (P3-6) {@code GeoDataSeedInitializer}에서 분리.
  * 두 seed 메서드를 각각 독립 트랜잭션({@link Propagation#REQUIRES_NEW})으로 처리하여
  * 첫 seed가 부분 실패하더라도 두 번째 seed는 영향 받지 않게 격리한다.
  *
- * <p>또한 별도 빈({@code @Service})으로 분리해야 Spring AOP 프록시를 통해
+ * 또한 별도 빈({@code @Service})으로 분리해야 Spring AOP 프록시를 통해
  * {@code @Transactional}이 정상 적용된다 (self-invocation 회피).
  */
 @Slf4j

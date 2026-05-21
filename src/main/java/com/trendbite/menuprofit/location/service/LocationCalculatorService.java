@@ -1,5 +1,7 @@
 package com.trendbite.menuprofit.location.service;
 
+import com.trendbite.menuprofit.location.config.LocationProperties;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -12,32 +14,78 @@ import org.springframework.stereotype.Service;
  *   raw = 0.4 * t + 0.4 * s - 0.2 * c          (이론 범위 -0.2 ~ 0.8)
  *   multiplier = 0.8 + 0.4 * ((raw + 0.2) / 1.0)  (이론 범위 0.8 ~ 1.2)
  *
- * Min-Max 기준값은 초기 추정치이며, 실데이터 수집 후 상수 조정 가능하다.
+ * v3 변경 사항 (round 2)
+ * 
+ *   (P2-1) Min-Max 기준값을 {@link LocationProperties}로 외부화.
+ *              기존 {@code static final TRAFFIC_MIN/MAX} 등은 {@code @Deprecated} 상태로 호환성 유지
+ *   (P2-1) {@link #normalizeTraffic(long)}, {@link #normalizeSales(long)},
+ *              {@link #normalizeCompetition(int)} 도메인 편의 메서드 추가 (인스턴스 필드 사용)
+ *   가중치(WEIGHT_*)와 결과 범위(MULTIPLIER_MIN/MAX)는 계산 공식 자체이므로 상수 유지
+ * 
  *
- * <h3>v2 (P4-1): {@link #calculateFromScores(double, double, double)} 추가</h3>
- * 기존 {@link #calculate(long, long, int)}는 내부에서 normalize를 다시 호출하여,
- * {@code LocationAnalysisService}가 별도로 normalize한 값과 합쳐 총 6번 normalize되는 문제가 있었다.
- * 이미 정규화된 값을 받는 {@code calculateFromScores}를 사용하면 normalize는 3번만 실행된다.
+ * v2 (P4-1, 이전 라운드)
+ * {@link #calculateFromScores(double, double, double)}로 normalize 중복 호출 제거.
  */
 @Service
 public class LocationCalculatorService {
 
-    // Min-Max 기준값 (v2.0 명세서)
-    public static final double TRAFFIC_MIN =       5_000.0;
-    public static final double TRAFFIC_MAX =      40_000.0;
-    public static final double SALES_MIN   =  10_000_000.0;
-    public static final double SALES_MAX   =  50_000_000.0;
-    public static final int    COMP_MIN    =            0;
-    public static final int    COMP_MAX    =           30;
+    // ──────────────────────────────── 기본값 상수 (호환성) ────────────────────────────────
+    public static final double DEFAULT_TRAFFIC_MIN =       5_000.0;
+    public static final double DEFAULT_TRAFFIC_MAX =      40_000.0;
+    public static final double DEFAULT_SALES_MIN   =  10_000_000.0;
+    public static final double DEFAULT_SALES_MAX   =  50_000_000.0;
+    public static final int    DEFAULT_COMP_MIN    =            0;
+    public static final int    DEFAULT_COMP_MAX    =           30;
 
-    // 가중치
+    /** @deprecated (P2-1) {@link LocationProperties} 또는 {@link #DEFAULT_TRAFFIC_MIN} 사용. */
+    @Deprecated public static final double TRAFFIC_MIN = DEFAULT_TRAFFIC_MIN;
+    /** @deprecated (P2-1) */ @Deprecated public static final double TRAFFIC_MAX = DEFAULT_TRAFFIC_MAX;
+    /** @deprecated (P2-1) */ @Deprecated public static final double SALES_MIN   = DEFAULT_SALES_MIN;
+    /** @deprecated (P2-1) */ @Deprecated public static final double SALES_MAX   = DEFAULT_SALES_MAX;
+    /** @deprecated (P2-1) */ @Deprecated public static final int    COMP_MIN    = DEFAULT_COMP_MIN;
+    /** @deprecated (P2-1) */ @Deprecated public static final int    COMP_MAX    = DEFAULT_COMP_MAX;
+
+    // 가중치 (계산 공식 자체) — 상수 유지
     public static final double WEIGHT_TRAFFIC     =  0.40;
     public static final double WEIGHT_SALES       =  0.40;
     public static final double WEIGHT_COMPETITION = -0.20;
 
-    // 최종 범위 클램핑
+    // 최종 범위 클램핑 — 상수 유지
     public static final double MULTIPLIER_MIN = 0.80;
     public static final double MULTIPLIER_MAX = 1.20;
+
+    // ──────────────────────────────── 인스턴스 필드 (P2-1) ────────────────────────────────
+    private final double trafficMin, trafficMax;
+    private final double salesMin,   salesMax;
+    private final int    compMin,    compMax;
+
+    /**
+     * (P2-1) Spring DI 생성자 — {@link LocationProperties}에서 Min-Max 기준값 주입.
+     * application.properties에 키가 없으면 LocationProperties 필드 초기화의 기본값(명세 v2.0 추정치)이 사용된다.
+     */
+    @Autowired
+    public LocationCalculatorService(LocationProperties props) {
+        this.trafficMin = props.getTrafficMin();
+        this.trafficMax = props.getTrafficMax();
+        this.salesMin   = props.getSalesMin();
+        this.salesMax   = props.getSalesMax();
+        this.compMin    = props.getCompMin();
+        this.compMax    = props.getCompMax();
+    }
+
+    /**
+     * 단위 테스트용 기본값 생성자 — LocationProperties 없이 명세 v2.0 추정치 사용.
+     */
+    public LocationCalculatorService() {
+        this.trafficMin = DEFAULT_TRAFFIC_MIN;
+        this.trafficMax = DEFAULT_TRAFFIC_MAX;
+        this.salesMin   = DEFAULT_SALES_MIN;
+        this.salesMax   = DEFAULT_SALES_MAX;
+        this.compMin    = DEFAULT_COMP_MIN;
+        this.compMax    = DEFAULT_COMP_MAX;
+    }
+
+    // ──────────────────────────────── 정규화 ────────────────────────────────
 
     /**
      * 값을 [0, 1]로 Min-Max 정규화.
@@ -49,32 +97,38 @@ public class LocationCalculatorService {
         return Math.max(0.0, Math.min(1.0, ratio));
     }
 
+    /** (P2-1) 인스턴스 필드 기반 도메인 편의 메서드 — 유동인구 정규화. */
+    public double normalizeTraffic(long value) {
+        return normalize(value, trafficMin, trafficMax);
+    }
+
+    /** (P2-1) 인스턴스 필드 기반 도메인 편의 메서드 — 추정매출 정규화. */
+    public double normalizeSales(long value) {
+        return normalize(value, salesMin, salesMax);
+    }
+
+    /** (P2-1) 인스턴스 필드 기반 도메인 편의 메서드 — 경쟁점포 정규화. */
+    public double normalizeCompetition(int value) {
+        return normalize(value, compMin, compMax);
+    }
+
+    // ──────────────────────────────── 보정계수 계산 ────────────────────────────────
+
     /**
      * 입지 보정계수 계산 (소수 3자리로 반올림, 0.8~1.2로 클램핑).
      *
-     * <p>raw 값을 받아 normalize까지 수행. 단위 테스트와 외부 호출 호환을 위해 유지.
-     *
      * @deprecated 신규 코드는 {@link #calculateFromScores(double, double, double)} 사용 권장.
-     *             해당 메서드는 이미 정규화된 값을 받아 normalize 중복 호출을 피한다.
      */
     @Deprecated
     public double calculate(long traffic, long sales, int competition) {
-        double t = normalize(traffic,     TRAFFIC_MIN, TRAFFIC_MAX);
-        double s = normalize(sales,       SALES_MIN,   SALES_MAX);
-        double c = normalize(competition, COMP_MIN,    COMP_MAX);
+        double t = normalizeTraffic(traffic);
+        double s = normalizeSales(sales);
+        double c = normalizeCompetition(competition);
         return calculateFromScores(t, s, c);
     }
 
     /**
-     * 이미 정규화된 점수(0~1)에서 직접 multiplier를 계산한다.
-     * <p>
-     * (P4-1) {@code LocationAnalysisService}가 별도로 normalize한 결과를 그대로 받아
-     * normalize 중복 호출 없이 multiplier를 산출하기 위한 메서드.
-     *
-     * @param trafficScore     normalize(traffic,  TRAFFIC_MIN, TRAFFIC_MAX) — 0~1
-     * @param salesScore       normalize(sales,    SALES_MIN,   SALES_MAX)   — 0~1
-     * @param competitionScore normalize(comp,     COMP_MIN,    COMP_MAX)    — 0~1
-     * @return locationMultiplier (0.8~1.2, 소수 3자리 반올림)
+     * (P4-1) 이미 정규화된 점수(0~1)에서 직접 multiplier를 계산.
      */
     public double calculateFromScores(double trafficScore, double salesScore, double competitionScore) {
         double raw = (WEIGHT_TRAFFIC * trafficScore)
@@ -85,9 +139,7 @@ public class LocationCalculatorService {
         return Math.round(clamped * 1000.0) / 1000.0;
     }
 
-    /**
-     * raw_score 자체를 반환 (Response DTO에 표시용, 소수 3자리 반올림).
-     */
+    /** raw_score 자체를 반환 (Response DTO에 표시용, 소수 3자리 반올림). */
     public double calculateRawScore(double trafficScore, double salesScore, double competitionScore) {
         double raw = (WEIGHT_TRAFFIC * trafficScore)
                    + (WEIGHT_SALES   * salesScore)
