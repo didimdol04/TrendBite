@@ -3,6 +3,7 @@ import './globals.css';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { UserProvider } from '@/lib/userContext';
+import { TbToaster } from '@/components/Toast';
 
 export const metadata: Metadata = {
   title: 'TrendBite — 신메뉴 수익성 시뮬레이터',
@@ -24,6 +25,7 @@ export default function RootLayout({
             <main className="tb-main">{children}</main>
             <Footer />
           </div>
+          <TbToaster />
         </UserProvider>
       </body>
     </html>

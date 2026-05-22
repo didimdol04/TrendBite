@@ -2,10 +2,13 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Box, Btn, Badge, Chip, PendingMarker, fmt } from '@/components/Primitives';
-import { SketchLine, SketchDonut, SketchGauge, SketchWaterfall, MapPh } from '@/components/Charts';
+import type { AnalysisRequest } from '@/lib/types';
+import { SketchLine, SketchDonut, SketchGauge, SketchWaterfall } from '@/components/Charts';
+import { KakaoMap } from '@/components/KakaoMap';
 import { useUser } from '@/lib/userContext';
 import { MOCK_ANALYSIS_RESPONSE, MOCK_LIFECYCLES } from '@/lib/mockData';
 import type { AnalysisResponse, SimilarPattern, LifecycleResponse } from '@/lib/types';
+import { toast } from '@/components/Toast';
 import Link from 'next/link';
 
 type LoadedResult = {
@@ -15,7 +18,9 @@ type LoadedResult = {
   address?: string;
   createdAt: string;
   data: AnalysisResponse['data'];
-  menuId?: number; // 저장된 분석만
+  menuId?: number;
+  noTrend?: boolean;
+  originalRequest?: AnalysisRequest;
 };
 
 export default function ResultPage() {
@@ -56,6 +61,8 @@ export default function ResultPage() {
           createdAt: saved.createdAt,
           data: saved.response,
           menuId: saved.menuId,
+          noTrend: saved.noTrend,
+          originalRequest: saved.originalRequest,
         });
       }
     }
@@ -78,8 +85,8 @@ export default function ResultPage() {
   return (
     <div style={{ background: '#fff' }}>
       <VerdictHero result={result} />
-      <ScoreBreakdownSection data={result.data} />
-      <TrendSection data={result.data} />
+      <ScoreBreakdownSection data={result.data} noTrend={result.noTrend} />
+      <TrendSection data={result.data} noTrend={result.noTrend} />
       <LocationSection data={result.data} />
       <FinanceSection data={result.data} />
       <AIReportSection data={result.data} result={result} />
@@ -91,9 +98,17 @@ export default function ResultPage() {
 // Verdict Hero (와이어프레임 A안 - 풀-블리드 네이비)
 // ────────────────────────────────────────────────────────
 function VerdictHero({ result }: { result: LoadedResult }) {
+  const router = useRouter();
   const { verdict, scores } = result.data.report;
   const verdictBadge = VERDICT_BADGE[verdict];
   const headline = VERDICT_HEADLINE[verdict];
+
+  const handleRetry = () => {
+    if (result.originalRequest) {
+      try { sessionStorage.setItem('trendbite_wizard_draft', JSON.stringify(result.originalRequest)); } catch {}
+    }
+    router.push('/analyze');
+  };
 
   return (
     <div style={{
@@ -132,20 +147,32 @@ function VerdictHero({ result }: { result: LoadedResult }) {
           background: 'rgba(255,255,255,0.08)', borderRadius: 16, padding: 20,
           textAlign: 'center', border: '1px solid rgba(255,255,255,0.15)',
         }}>
-          <SketchDonut size={160} value={scores.total} label="종합 점수" color="var(--tb-amber)" />
+          {result.noTrend ? (
+            <svg width={160} height={160}>
+              <circle cx={80} cy={80} r={68} stroke="rgba(255,255,255,0.15)" strokeWidth="10" fill="none" />
+              <text x={80} y={76} textAnchor="middle" fontSize="28" fontWeight={700}
+                fill="rgba(255,255,255,0.35)" fontFamily="var(--tb-font)">N/A</text>
+              <text x={80} y={100} textAnchor="middle" fontSize="11"
+                fill="rgba(255,255,255,0.3)" fontFamily="var(--tb-font-mono)">종합 점수</text>
+              <text x={80} y={116} textAnchor="middle" fontSize="10"
+                fill="rgba(255,255,255,0.25)" fontFamily="var(--tb-font-mono)">트렌드 제외</text>
+            </svg>
+          ) : (
+            <SketchDonut size={160} value={scores.total} label="종합 점수" color="var(--tb-amber)" />
+          )}
         </div>
       </div>
 
       {/* floating action bar */}
-      <div style={{
+      <div className="no-print" style={{
         position: 'absolute', top: 16, right: 24,
         display: 'flex', gap: 6, padding: 6,
         background: 'rgba(255,255,255,0.08)',
         border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8,
       }}>
         {[
-          { icon: '↻', label: '다시', onClick: () => alert('🔶 다시 분석 동선 합의 필요') },
-          { icon: '⤓', label: 'PDF', onClick: () => alert('🔶 PDF 저장 기능 추후 구현') },
+          { icon: '↻', label: '다시', onClick: handleRetry },
+          { icon: '⤓', label: 'PDF', onClick: () => window.print() },
           { icon: '↗', label: '공유', onClick: () => alert('🔶 공유 기능 추후 구현') },
         ].map((a, i) => (
           <button
@@ -189,8 +216,13 @@ const VERDICT_HEADLINE: Record<string, { title: (m: string) => string; highlight
 // ────────────────────────────────────────────────────────
 // Score Breakdown
 // ────────────────────────────────────────────────────────
-function ScoreBreakdownSection({ data }: { data: AnalysisResponse['data'] }) {
+function ScoreBreakdownSection({ data, noTrend }: { data: AnalysisResponse['data']; noTrend?: boolean }) {
   const { scores } = data.report;
+  const nonTrendItems = [
+    { t: '수익성',  v: scores.profitability,  sub: '이익률 ' + fmt.pct(data.finance.data.monthlyResult.profitMargin) },
+    { t: '지속성',  v: scores.sustainability, sub: '예상 24주' },
+    { t: '종합',    v: scores.total,          sub: 'verdict: ' + data.report.verdict },
+  ];
   return (
     <section style={{ padding: 'clamp(24px, 4vw, 32px) clamp(20px, 6vw, 80px)', background: '#fff' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
@@ -200,12 +232,22 @@ function ScoreBreakdownSection({ data }: { data: AnalysisResponse['data'] }) {
         </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        {[
-          { t: '트렌드',  v: scores.trend,          sub: data.trend.plc_stage + ' · ' + data.trend.overall_trend },
-          { t: '수익성',  v: scores.profitability,  sub: '이익률 ' + fmt.pct(data.finance.data.monthlyResult.profitMargin) },
-          { t: '지속성',  v: scores.sustainability, sub: '예상 24주' },
-          { t: '종합',    v: scores.total,          sub: 'verdict: ' + data.report.verdict },
-        ].map((c, i) => (
+        {/* 트렌드 점수 — noTrend 시 회색 N/A */}
+        <Box style={{ padding: 18 }}>
+          {noTrend ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span className="wf-h3">트렌드</span>
+                <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--tb-ink-4)' }}>N/A</span>
+              </div>
+              <div style={{ height: 6, background: 'var(--tb-line-2)', borderRadius: 999 }} />
+              <span className="wf-mono" style={{ color: 'var(--tb-ink-4)' }}>트렌드 데이터 없음</span>
+            </div>
+          ) : (
+            <SketchGauge value={scores.trend} label="트렌드" sub={data.trend.plc_stage + ' · ' + data.trend.overall_trend} />
+          )}
+        </Box>
+        {nonTrendItems.map((c, i) => (
           <Box key={i} style={{ padding: 18 }}>
             <SketchGauge value={c.v} label={c.t} sub={c.sub} />
           </Box>
@@ -218,12 +260,37 @@ function ScoreBreakdownSection({ data }: { data: AnalysisResponse['data'] }) {
 // ────────────────────────────────────────────────────────
 // Trend Section
 // ────────────────────────────────────────────────────────
-function TrendSection({ data }: { data: AnalysisResponse['data'] }) {
+function TrendSection({ data, noTrend }: { data: AnalysisResponse['data']; noTrend?: boolean }) {
+  if (noTrend) {
+    return (
+      <section style={{ padding: 'clamp(24px, 4vw, 32px) clamp(20px, 6vw, 80px)', background: 'var(--tb-card)' }}>
+        <div style={{ marginBottom: 16 }}>
+          <div className="wf-eyebrow" style={{ marginBottom: 4 }}>SECTION C</div>
+          <div className="wf-h2">트렌드 분석</div>
+        </div>
+        <Box style={{ padding: '36px 24px', textAlign: 'center' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 56, height: 56, borderRadius: 999,
+            background: 'var(--tb-line-2)', marginBottom: 16,
+          }}>
+            <span style={{ fontSize: 22, color: 'var(--tb-ink-4)', fontWeight: 700 }}>—</span>
+          </div>
+          <div className="wf-h3" style={{ marginBottom: 8 }}>이 메뉴는 트렌드 데이터가 없습니다</div>
+          <p className="wf-muted" style={{ fontSize: 13, maxWidth: 400, margin: '0 auto', lineHeight: 1.6 }}>
+            TrendBite에 등록된 키워드가 아닌 메뉴입니다.<br />
+            PLC 분석 · 관심도 곡선 · DTW 유사 패턴은 표시되지 않습니다.
+          </p>
+        </Box>
+      </section>
+    );
+  }
+
   const t = data.trend;
   const plcStage = t.plc_stage;
 
   return (
-    <section style={{ padding: 'clamp(24px, 4vw, 32px) clamp(20px, 6vw, 80px)', background: 'var(--tb-canvas)' }}>
+    <section style={{ padding: 'clamp(24px, 4vw, 32px) clamp(20px, 6vw, 80px)', background: 'var(--tb-card)' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div className="wf-eyebrow" style={{ marginBottom: 4 }}>SECTION C</div>
@@ -401,7 +468,7 @@ function LocationSection({ data }: { data: AnalysisResponse['data'] }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16, marginBottom: 16 }}>
         <Box style={{ padding: 12 }}>
-          <MapPh height={260} address={loc.locationInfo.address} />
+          <KakaoMap lat={loc.locationInfo.lat} lng={loc.locationInfo.lng} height={260} />
         </Box>
         <Box style={{ padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
@@ -468,7 +535,7 @@ function FinanceSection({ data }: { data: AnalysisResponse['data'] }) {
   const incremental = data.simulation.data.incremental;
 
   return (
-    <section style={{ padding: 'clamp(24px, 4vw, 32px) clamp(20px, 6vw, 80px)', background: 'var(--tb-canvas)' }}>
+    <section style={{ padding: 'clamp(24px, 4vw, 32px) clamp(20px, 6vw, 80px)', background: 'var(--tb-card)' }}>
       <div style={{ marginBottom: 16 }}>
         <div className="wf-eyebrow" style={{ marginBottom: 4 }}>SECTION E</div>
         <div className="wf-h2">재무 시뮬레이션</div>
@@ -527,7 +594,7 @@ function FinanceSection({ data }: { data: AnalysisResponse['data'] }) {
             { t: '이익률',          v: fmt.pct(sim.profitMargin) },
             { t: '운영 부담 지수',  v: sim.operationBurdenIndex.toFixed(2) },
           ].map((k, i) => (
-            <div key={i} style={{ padding: '12px 16px', background: 'var(--tb-canvas)', borderRadius: 6 }}>
+            <div key={i} style={{ padding: '12px 16px', background: 'var(--tb-card)', borderRadius: 6 }}>
               <div className="wf-mono" style={{ marginBottom: 4 }}>{k.t}</div>
               <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--tb-navy)' }}>{k.v}</div>
             </div>
@@ -580,6 +647,30 @@ function WarningLevelBadge({ level, burden }: { level: string; burden: number })
 function AIReportSection({ data, result }: { data: AnalysisResponse['data']; result: LoadedResult }) {
   const router = useRouter();
   const { state } = useUser();
+  const noTrend = result.noTrend;
+
+  useEffect(() => {
+    if (noTrend) {
+      toast.info('실서비스 시 입지/재무만 기반 LLM 프롬프트 분기 필요');
+    }
+  // 마운트 1회만 실행
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const reportText = noTrend
+    ? [
+        result.menuName + ' 메뉴는 TrendBite 등록 키워드가 아니어서 트렌드 데이터 없이 분석되었습니다.',
+        '',
+        '입지 등급 ' + data.location.data.finalResult.grade + '점 · 보정계수 x' +
+          data.location.data.finalResult.locationMultiplier.toFixed(2) +
+          ' 기반으로 수익성을 평가했습니다. 이익률 ' +
+          fmt.pct(data.finance.data.monthlyResult.profitMargin) +
+          ' · 일 손익분기 ' + data.finance.data.breakEven.breakEvenQuantityPerDay + '개 달성이 핵심 조건입니다.',
+        '',
+        '트렌드 리스크를 배제한 입지 · 재무 중심 의사결정을 권장합니다.',
+      ].join('\n')
+    : data.report.llmReport;
+
   return (
     <section style={{ padding: 'clamp(24px, 4vw, 32px) clamp(20px, 6vw, 80px)', background: '#fff' }}>
       <div style={{ marginBottom: 16 }}>
@@ -587,13 +678,15 @@ function AIReportSection({ data, result }: { data: AnalysisResponse['data']; res
         <div className="wf-h2">AI 리포트 + 리스크</div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
-        <Box style={{ padding: '28px 32px', borderLeft: '4px solid var(--tb-navy)', borderRadius: 8 }}>
+        <Box style={{ padding: '28px 32px', borderLeft: '4px solid ' + (noTrend ? 'var(--tb-line)' : 'var(--tb-navy)'), borderRadius: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-            <span style={{ fontSize: 20, color: 'var(--tb-navy)' }}>“</span>
-            <span className="wf-mono" style={{ color: 'var(--tb-navy)' }}>TRENDBITE AI · LangGraph</span>
+            <span style={{ fontSize: 20, color: noTrend ? 'var(--tb-ink-4)' : 'var(--tb-navy)' }}>"</span>
+            <span className="wf-mono" style={{ color: noTrend ? 'var(--tb-ink-4)' : 'var(--tb-navy)' }}>
+              TRENDBITE AI · LangGraph{noTrend ? ' (입지/재무 기반)' : ''}
+            </span>
           </div>
           <p style={{ fontSize: 14.5, lineHeight: 1.75, color: 'var(--tb-ink)', margin: 0, whiteSpace: 'pre-line' }}>
-            {data.report.llmReport}
+            {reportText}
           </p>
         </Box>
         <Box style={{ padding: 20 }}>

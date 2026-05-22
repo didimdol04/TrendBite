@@ -230,35 +230,17 @@ export const MOCK_LIFECYCLES: LifecycleResponse[] = [
   { name: '재유행',     description: '주기적 재부상 패턴',           color: '#9B59B6' },
 ];
 
-/**
- * 검색어 오타/유사 메뉴 추천 — 회의록 명시 기능.
- * 현재는 시드 패턴 3종 + 인기 키워드 + 간단한 사전으로 데모.
- * (🔶 합의 필요: 실서비스에선 백엔드에 endpoint 추가 + 더 정교한 매칭 알고리즘)
- */
-const KNOWN_KEYWORDS = [
-  '마라탕', '마라샹궈', '마라탕후루',
+/** TrendBite 등록 키워드 목록 — searchMenuKeywords mock 소스 */
+export const KNOWN_KW = [
+  '마라탕', '마라꼬치', '마라샹궈', '마라전골', '마라탕후루',
   '탕후루', '흑당버블티',
   '두바이초콜릿', '요아정', '크로플',
   '흑임자라떼', '약과', '붕어빵', '로제떡볶이',
   '키토김밥', '달고나커피',
 ];
 
-export function findSimilarKeywords(input: string, limit = 4): string[] {
-  if (!input.trim()) return [];
-  const q = input.trim().toLowerCase();
-  return KNOWN_KEYWORDS.filter(k => {
-    const kl = k.toLowerCase();
-    if (kl === q) return false;
-    return kl.includes(q) || q.includes(kl) ||
-      [...q].some(ch => kl.includes(ch)) && Math.abs(kl.length - q.length) <= 2;
-  })
-    .slice(0, limit);
-}
-
 export function hasExactKeywordData(input: string): boolean {
-  // 데모: 시드 3종은 실제 트렌드 데이터 있다고 가정
-  const seeds = ['탕후루', '흑당버블티', '마라탕'];
-  return seeds.some(s => s === input.trim());
+  return KNOWN_KW.includes(input.trim());
 }
 
 /** category 한글 ↔ 영문 매핑 — 백엔드는 자유 문자열이지만 일관성을 위해 dropdown 사용 */

@@ -97,6 +97,7 @@ export interface BaselineProfitDto {
 export interface AnalysisResponse {
   success: boolean;
   data: {
+    menuId?: number;  // 백엔드 생성 Menu 엔티티 ID (실판매 기록용)
     location: LocationAnalysisResponse;
     finance: FinanceResponseDto;
     trend: TrendResponse;
@@ -309,6 +310,8 @@ export interface SavedAnalysis {
   address?: string;
   createdAt: string;
   response: AnalysisResponse['data'];
+  noTrend?: boolean;
+  originalRequest?: AnalysisRequest; // '다시' 버튼으로 입력 복원용
 }
 
 export interface SavedSalesRecord {

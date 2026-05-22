@@ -20,7 +20,7 @@ export function LoadingOverlay({ menuName, activeStep }: { menuName: string; act
     <div style={{
       position: 'fixed', inset: 0, zIndex: 200,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      background: 'linear-gradient(180deg, #F5F7FA 0%, #ECEFF7 100%)',
+      background: 'linear-gradient(180deg, var(--tb-card) 0%, #ECEFF7 100%)',
       padding: 20,
     }}>
       <Box style={{ width: '100%', maxWidth: 560, padding: '48px 48px 36px', textAlign: 'center', background: '#fff' }}>

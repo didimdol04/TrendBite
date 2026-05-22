@@ -27,7 +27,7 @@ interface Ctx {
   login: (nickname: string) => UserProfile;
   logout: () => void;
   isReturning: (nickname: string) => boolean;
-  saveAnalysis: (input: { menuName: string; category: string; address?: string; data: AnalysisResponse['data'] }) => SavedAnalysis;
+  saveAnalysis: (input: { menuName: string; category: string; address?: string; data: AnalysisResponse['data']; noTrend?: boolean; menuId?: number; originalRequest?: SavedAnalysis['originalRequest'] }) => SavedAnalysis;
   getAnalyses: () => SavedAnalysis[];
   getAnalysis: (id: string) => SavedAnalysis | undefined;
   saveSalesRecord: (input: Omit<SavedSalesRecord, 'id' | 'userId' | 'createdAt'>) => SavedSalesRecord;
@@ -51,22 +51,34 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, []);
 
-  const login = useCallback((nickname: string): UserProfile => {
-    const trimmed = nickname.trim();
-    if (!trimmed) throw new Error('닉네임을 입력해주세요');
+  const login = useCallback((nameInput: string): UserProfile => {
+    const trimmed = nameInput.trim();
+    if (!trimmed) throw new Error('가게명을 입력해주세요');
 
     let known: Record<string, UserProfile> = {};
     try {
       known = JSON.parse(localStorage.getItem(KNOWN_NICKNAMES_KEY) || '{}');
     } catch {}
 
-    const existing = known[trimmed];
-    const user: UserProfile = existing || {
+    // 베이스 가게명 추출: 'XX #ABCD' 패턴에서 'XX' 분리
+    const suffixMatch = trimmed.match(/^(.+)\s#[A-Z0-9]{4}$/);
+    const baseName = suffixMatch ? suffixMatch[1] : trimmed;
+
+    // 기존 가게 → 저장된 프로필 그대로 복원
+    const existing = known[baseName];
+    if (existing) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(existing));
+      setState({ kind: 'identified', user: existing });
+      return existing;
+    }
+
+    // 신규 가게 → trimmed(suffix 포함)을 nickname으로, baseName을 키로 저장
+    const user: UserProfile = {
       id: uuid(),
       nickname: trimmed,
       createdAt: new Date().toISOString(),
     };
-    known[trimmed] = user;
+    known[baseName] = user;
     localStorage.setItem(KNOWN_NICKNAMES_KEY, JSON.stringify(known));
     localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
     setState({ kind: 'identified', user });
@@ -78,12 +90,15 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setState({ kind: 'guest' });
   }, []);
 
-  const isReturning = useCallback((nickname: string): boolean => {
+  const isReturning = useCallback((nameInput: string): boolean => {
     try {
       const known: Record<string, UserProfile> = JSON.parse(
         localStorage.getItem(KNOWN_NICKNAMES_KEY) || '{}'
       );
-      return !!known[nickname.trim()];
+      const trimmed = nameInput.trim();
+      const suffixMatch = trimmed.match(/^(.+)\s#[A-Z0-9]{4}$/);
+      const baseName = suffixMatch ? suffixMatch[1] : trimmed;
+      return !!known[baseName];
     } catch {
       return false;
     }
@@ -94,7 +109,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       throw new Error('게스트는 분석을 저장할 수 없습니다.');
     }
     const all = readJson<SavedAnalysis[]>(ANALYSES_KEY, []);
-    const menuId = all.length ? Math.max(...all.map(a => a.menuId)) + 1 : 1;
+    // 백엔드가 menuId를 반환하면 우선 사용, 없으면 클라이언트 시퀀스로 폴백
+    const menuId = input.menuId ?? (all.length ? Math.max(...all.map(a => a.menuId)) + 1 : 1);
     const saved: SavedAnalysis = {
       id: uuid(),
       userId: state.user.id,
@@ -104,6 +120,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       address: input.address,
       createdAt: new Date().toISOString(),
       response: input.data,
+      noTrend: input.noTrend,
+      originalRequest: input.originalRequest,
     };
     all.push(saved);
     writeJson(ANALYSES_KEY, all);

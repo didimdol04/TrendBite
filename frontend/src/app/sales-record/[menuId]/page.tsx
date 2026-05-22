@@ -166,9 +166,9 @@ export default function SalesRecordPage() {
             {saving ? '저장 중...' : '＋ 기록 추가'}
           </Btn>
 
-          <div style={{ marginTop: 16, padding: '10px 12px', background: 'var(--tb-canvas)', borderRadius: 6, fontSize: 11.5, color: 'var(--tb-ink-3)' }}>
+          <div style={{ marginTop: 16, padding: '10px 12px', background: 'var(--tb-card)', borderRadius: 6, fontSize: 11.5, color: 'var(--tb-ink-3)' }}>
             <div style={{ marginBottom: 4 }}>📅 <b>매일 1회 기록 권장</b> · 동일 날짜 중복 불가</div>
-            <div>📦 <b>CSV 일괄 업로드</b>는 추후 지원 예정 — <PendingMarker>업로드 형식 합의 필요</PendingMarker></div>
+            <div>📦 <b>CSV 일괄 업로드</b>는 추후 지원 예정</div>
           </div>
         </Box>
 
@@ -233,7 +233,7 @@ export default function SalesRecordPage() {
             ) : (
               <>
                 {/* 시계열 차트 */}
-                <div style={{ marginBottom: 16, padding: 12, background: 'var(--tb-canvas)', borderRadius: 6 }}>
+                <div style={{ marginBottom: 16, padding: 12, background: 'var(--tb-card)', borderRadius: 6 }}>
                   <SketchLine
                     width={500} height={80}
                     data={records.slice(-14).map(r => r.actualQuantity)}
@@ -248,7 +248,7 @@ export default function SalesRecordPage() {
                 {/* 목록 */}
                 <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid var(--tb-line-2)', borderRadius: 6 }}>
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5 }}>
-                    <thead style={{ background: 'var(--tb-canvas)', position: 'sticky', top: 0 }}>
+                    <thead style={{ background: 'var(--tb-card)', position: 'sticky', top: 0 }}>
                       <tr>
                         <th style={th}>날짜</th>
                         <th style={th}>판매량</th>
