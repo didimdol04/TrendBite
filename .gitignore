@@ -40,3 +40,5 @@ out/
 .env.properties
 .env.*
 .env
+
+frontend/
