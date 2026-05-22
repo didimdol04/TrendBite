@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 
 export const Box = ({
   children, style, className = '', dashed = false, ...rest
@@ -93,6 +93,40 @@ export const PendingBox = ({ title, children }: { title: string; children: React
     <div>{children}</div>
   </div>
 );
+
+/**
+ * 천 단위 콤마 입력 필드.
+ * - 포커스 중: 숫자만 입력 (콤마 자동 제거)
+ * - 블러 시: toLocaleString으로 콤마 포맷
+ */
+export function NumberInput({
+  value, onChange, lg, style, ...rest
+}: {
+  value: number;
+  onChange: (n: number) => void;
+  lg?: boolean;
+} & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type' | 'onFocus' | 'onBlur'>) {
+  const [focused, setFocused] = useState(false);
+  const [raw, setRaw] = useState('');
+
+  return (
+    <input
+      className={'wf-input' + (lg ? ' wf-input-lg' : '')}
+      type="text"
+      inputMode="numeric"
+      style={style}
+      value={focused ? raw : (value ? value.toLocaleString('ko-KR') : '')}
+      onFocus={() => { setFocused(true); setRaw(value ? String(value) : ''); }}
+      onBlur={() => { setFocused(false); onChange(Number(raw) || 0); }}
+      onChange={(e) => {
+        const digits = e.target.value.replace(/[^0-9]/g, '');
+        setRaw(digits);
+        onChange(Number(digits) || 0);
+      }}
+      {...rest}
+    />
+  );
+}
 
 /* 숫자 포맷 헬퍼 */
 export const fmt = {

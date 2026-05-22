@@ -1,17 +1,14 @@
 'use client';
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Box, Btn, Input, Field, Progress, Badge, Chip, PendingMarker, PendingBox } from '@/components/Primitives';
-import { SketchBars, MapPh } from '@/components/Charts';
+import { Box, Btn, Input, Field, Progress, Badge, Chip, PendingMarker, PendingBox, NumberInput } from '@/components/Primitives';
+import { SketchBars } from '@/components/Charts';
+import { AddressInput } from '@/components/AddressInput';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { useWizardForm } from '@/lib/wizardForm';
 import { useUser } from '@/lib/userContext';
-import { runAnalysis } from '@/lib/api';
-import {
-  CATEGORY_OPTIONS,
-  findSimilarKeywords,
-  hasExactKeywordData,
-} from '@/lib/mockData';
+import { runAnalysis, searchMenuKeywords } from '@/lib/api';
+import { CATEGORY_OPTIONS } from '@/lib/mockData';
 import type { EmployeeDto, AnalysisRequest } from '@/lib/types';
 
 const STEPS = [
@@ -40,6 +37,7 @@ function AnalyzeInner() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0); // 0~3: 입지/재무/트렌드/AI
+  const [partialMode, setPartialMode] = useState(false);
 
   // 인기 키워드에서 진입 시 자동 채움
   useEffect(() => {
@@ -80,6 +78,9 @@ function AnalyzeInner() {
           category: form.category,
           address: form.location.address,
           data: res.data,
+          noTrend: partialMode,
+          menuId: res.data.menuId,
+          originalRequest: form,
         });
         reset();
         router.push(`/result/${saved.id}`);
@@ -91,6 +92,7 @@ function AnalyzeInner() {
           address: form.location.address,
           data: res.data,
           createdAt: new Date().toISOString(),
+          noTrend: partialMode,
         }));
         reset();
         router.push('/result/guest');
@@ -163,7 +165,7 @@ function AnalyzeInner() {
         </aside>
 
         <main className="wizard-body">
-          {step === 0 && <Step1 form={form} setForm={setForm} />}
+          {step === 0 && <Step1 form={form} setForm={setForm} onPartialModeChange={setPartialMode} />}
           {step === 1 && <Step2 form={form} setForm={setForm} />}
           {step === 2 && <Step3 form={form} setForm={setForm} />}
           {step === 3 && <Step4 form={form} setForm={setForm} />}
@@ -231,12 +233,17 @@ function FormBar({
 }
 
 // ────────────────────────────────────────────────────────
-// Step 1: 메뉴 정보 + 유사 검색어 추천
+// Step 1: 메뉴 정보 + 키워드 매칭 후보 드롭다운
 // ────────────────────────────────────────────────────────
 function Step1({
-  form, setForm,
-}: { form: AnalysisRequest; setForm: React.Dispatch<React.SetStateAction<AnalysisRequest>> }) {
-  const [showNoDataBanner, setShowNoDataBanner] = useState(false);
+  form, setForm, onPartialModeChange,
+}: {
+  form: AnalysisRequest;
+  setForm: React.Dispatch<React.SetStateAction<AnalysisRequest>>;
+  onPartialModeChange: (v: boolean) => void;
+}) {
+  const [candidates, setCandidates] = useState<string[]>([]);
+  const [noDataMode, setNoDataMode] = useState(false);
 
   const setMenu = (patch: Partial<typeof form.finance.menuInfo>) => {
     setForm(f => ({
@@ -247,19 +254,25 @@ function Step1({
     }));
   };
 
-  const onMenuNameChange = (name: string) => {
+  const onMenuNameChange = async (name: string) => {
     setMenu({ menuName: name });
     setForm(f => ({ ...f, keyword: name }));
-    // 분기 결정 트리: 트렌드 데이터 없음 안내
-    if (name.length >= 2 && !hasExactKeywordData(name) && findSimilarKeywords(name).length === 0) {
-      setShowNoDataBanner(true);
-    } else {
-      setShowNoDataBanner(false);
+    if (!name.trim()) {
+      setCandidates([]);
+      setNoDataMode(false);
+      onPartialModeChange(false);
+      return;
     }
+    const results = await searchMenuKeywords(name.trim());
+    setCandidates(results);
+    const empty = results.length === 0;
+    setNoDataMode(empty);
+    onPartialModeChange(empty);
   };
 
-  const similar = findSimilarKeywords(form.finance.menuInfo.menuName);
-  const exactMatch = hasExactKeywordData(form.finance.menuInfo.menuName);
+  const inputName = form.finance.menuInfo.menuName.trim();
+  const isExactMatch = inputName.length > 0 && candidates.includes(inputName);
+  const displayCandidates = candidates.filter(c => c !== inputName);
 
   return (
     <div>
@@ -268,7 +281,7 @@ function Step1({
         분석할 메뉴의 기본 정보입니다. 5분이면 충분해요.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="grid-2col">
         <Field label="메뉴명" required style={{ gridColumn: '1 / -1' }}>
           <Input
             lg
@@ -276,31 +289,49 @@ function Step1({
             value={form.finance.menuInfo.menuName}
             onChange={(e) => onMenuNameChange(e.target.value)}
           />
-          {/* 유사 검색어 추천 — 회의록 명시 기능 */}
-          {!exactMatch && similar.length > 0 && (
-            <div style={{ marginTop: 8 }}>
-              <div className="wf-mono" style={{ marginBottom: 6 }}>
-                ℹ️ 정확히 매칭되는 트렌드 데이터가 없어요. 비슷한 메뉴를 사용해보세요:
-              </div>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {similar.map((s) => (
-                  <Chip key={s} tone="navy" onClick={() => onMenuNameChange(s)}>
-                    {s}
-                  </Chip>
-                ))}
-              </div>
+          {/* 키워드 포함 매칭 후보 목록 */}
+          {displayCandidates.length > 0 && !isExactMatch && (
+            <div style={{
+              marginTop: 4,
+              border: '1px solid var(--tb-line)',
+              borderRadius: 'var(--tb-radius-sm)',
+              overflow: 'hidden',
+              background: '#fff',
+            }}>
+              {displayCandidates.map(c => (
+                <div
+                  key={c}
+                  onClick={() => onMenuNameChange(c)}
+                  style={{
+                    padding: '9px 14px', fontSize: 13, cursor: 'pointer',
+                    borderBottom: '1px solid var(--tb-line-2)',
+                    transition: 'background 0.1s',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--tb-card)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
+                >
+                  {c}
+                </div>
+              ))}
             </div>
           )}
-          {showNoDataBanner && (
-            <PendingBox title="트렌드 데이터 없음">
-              유행 신메뉴가 아닌 기존에 없던 메뉴입니다. 입지 + 재무 분석만 부분 제공되며, 트렌드 점수는 N/A로 표시됩니다.
-              <br/><br />
-              <PendingMarker>유사 메뉴 추천 임계값/소스 합의 필요</PendingMarker>
-            </PendingBox>
+          {/* 트렌드 데이터 없음 — 부분 분석 모드 안내 */}
+          {noDataMode && (
+            <div style={{
+              marginTop: 8, padding: '12px 14px',
+              background: 'var(--tb-amber-soft)',
+              border: '1px solid #E0A800',
+              borderRadius: 'var(--tb-radius-sm)',
+              fontSize: 12.5, color: '#806100',
+            }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>TrendBite에 등록된 트렌드 데이터가 없어요</div>
+              입지 + 재무 분석만 진행됩니다. 결과 페이지 트렌드 섹션은 N/A로 표시됩니다.
+            </div>
           )}
-          {exactMatch && (
+          {/* 정확히 매칭됨 */}
+          {isExactMatch && (
             <div style={{ marginTop: 6, fontSize: 11.5, color: 'var(--tb-success)' }}>
-              ✓ 트렌드 데이터 매칭됨 (DTW 시드 패턴)
+              ✓ 트렌드 데이터 매칭됨
             </div>
           )}
         </Field>
@@ -319,47 +350,30 @@ function Step1({
         </Field>
 
         <Field label="판매가 (원)" required>
-          <Input
-            lg type="number" min={0}
-            placeholder="9,800"
-            value={form.finance.menuInfo.sellingPrice || ''}
-            onChange={(e) => setMenu({ sellingPrice: Number(e.target.value) || 0 })}
+          <NumberInput lg placeholder="9,800"
+            value={form.finance.menuInfo.sellingPrice}
+            onChange={n => setMenu({ sellingPrice: n })}
           />
         </Field>
 
         <Field label="식재료비 (원/단위)" required>
-          <Input
-            lg type="number" min={0}
-            placeholder="2,400"
-            value={form.finance.directMaterialCost.ingredientCostPerUnit || ''}
-            onChange={(e) => setForm(f => ({
-              ...f,
-              finance: {
-                ...f.finance,
-                directMaterialCost: { ingredientCostPerUnit: Number(e.target.value) || 0 }
-              }
-            }))}
+          <NumberInput lg placeholder="2,400"
+            value={form.finance.directMaterialCost.ingredientCostPerUnit}
+            onChange={n => setForm(f => ({ ...f, finance: { ...f.finance, directMaterialCost: { ingredientCostPerUnit: n } } }))}
           />
         </Field>
 
         <Field label="포장재비 (원/단위)">
-          <Input
-            lg type="number" min={0}
-            placeholder="320"
-            value={form.finance.menuInfo.packagingCostPerUnit || ''}
-            onChange={(e) => setMenu({ packagingCostPerUnit: Number(e.target.value) || 0 })}
+          <NumberInput lg placeholder="320"
+            value={form.finance.menuInfo.packagingCostPerUnit}
+            onChange={n => setMenu({ packagingCostPerUnit: n })}
           />
         </Field>
 
         <Field label="변동제조간접원가 (원/단위)" hint="가스·전기·소모품 등 메뉴 1개 당 발생하는 변동 간접비">
-          <Input
-            lg type="number" min={0}
-            placeholder="500"
-            value={form.finance.variableOverheadCostPerUnit || ''}
-            onChange={(e) => setForm(f => ({
-              ...f,
-              finance: { ...f.finance, variableOverheadCostPerUnit: Number(e.target.value) || 0 }
-            }))}
+          <NumberInput lg placeholder="500"
+            value={form.finance.variableOverheadCostPerUnit}
+            onChange={n => setForm(f => ({ ...f, finance: { ...f.finance, variableOverheadCostPerUnit: n } }))}
           />
         </Field>
       </div>
@@ -373,56 +387,28 @@ function Step1({
 function Step2({
   form, setForm,
 }: { form: AnalysisRequest; setForm: React.Dispatch<React.SetStateAction<AnalysisRequest>> }) {
-  const setLoc = (patch: Partial<typeof form.location>) => {
-    setForm(f => ({ ...f, location: { ...f.location, ...patch } }));
-  };
-
   return (
     <div>
       <div className="wf-h1" style={{ fontSize: 24, marginBottom: 6 }}>매장 입지를 알려주세요</div>
       <p className="wf-muted" style={{ fontSize: 12.5, marginBottom: 24 }}>
-        주소 검색 후 지도에서 정확한 위치를 확인하세요.
+        주소 검색 또는 지도 클릭으로 위치를 선택하세요.
       </p>
 
-      <Field label="주소 검색" required style={{ marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Input
-            lg
-            placeholder="🔍  서울특별시 강남구 학동로"
-            value={form.location.address || ''}
-            onChange={(e) => setLoc({ address: e.target.value })}
-          />
-          <Btn lg>주소 검색</Btn>
-        </div>
-        <div style={{ marginTop: 6 }}>
-          <PendingMarker>카카오 우편번호 SDK 연동 필요 (현재는 직접 입력)</PendingMarker>
-        </div>
+      <Field label="매장 주소" required style={{ marginBottom: 16 }}>
+        <AddressInput
+          value={{
+            address: form.location.address,
+            lat: form.location.lat,
+            lng: form.location.lng,
+          }}
+          onChange={({ address, lat, lng }) =>
+            setForm(f => ({ ...f, location: { ...f.location, address, lat, lng } }))
+          }
+        />
       </Field>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-        <Field label="위도 (lat)">
-          <Input
-            type="number" step="any"
-            placeholder="37.5172"
-            value={form.location.lat || ''}
-            onChange={(e) => setLoc({ lat: Number(e.target.value) || 0 })}
-          />
-        </Field>
-        <Field label="경도 (lng)">
-          <Input
-            type="number" step="any"
-            placeholder="127.0473"
-            value={form.location.lng || ''}
-            onChange={(e) => setLoc({ lng: Number(e.target.value) || 0 })}
-          />
-        </Field>
-      </div>
-
-      <div className="wf-field-label" style={{ marginBottom: 6 }}>지도 미리보기 · 상권 영역 하이라이트</div>
-      <MapPh height={260} address={form.location.address} />
-
       <Box style={{
-        marginTop: 12, padding: '10px 14px',
+        marginTop: 4, padding: '10px 14px',
         display: 'flex', gap: 8, alignItems: 'center',
         background: 'var(--tb-amber-soft)', borderColor: 'transparent',
       }}>
@@ -470,7 +456,7 @@ function Step3({
       </p>
 
       <div className="wf-h3" style={{ marginBottom: 10 }}>A. 메뉴 1개 제조 시간</div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 28 }}>
+      <div className="grid-2col" style={{ marginBottom: 28 }}>
         <Field label="BOH (주방, 분)">
           <Input type="number" min={0} step={0.1}
             value={labor.bohTimeMinutes || ''}
@@ -522,20 +508,18 @@ function Step3({
 
           {emp.mode === 'simple' ? (
             <Field label="월 인건비 총액 (원)">
-              <Input type="number" min={0}
-                placeholder="3,200,000"
-                value={emp.monthlyTotal || ''}
-                onChange={e => updateEmployee(i, { monthlyTotal: Number(e.target.value) || 0 })}
+              <NumberInput placeholder="3,200,000"
+                value={emp.monthlyTotal || 0}
+                onChange={n => updateEmployee(i, { monthlyTotal: n })}
               />
             </Field>
           ) : (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+              <div className="grid-2col" style={{ marginBottom: 10 }}>
                 <Field label="시급 (원)">
-                  <Input type="number" min={0}
-                    placeholder="11,000"
-                    value={emp.hourlyWage || ''}
-                    onChange={e => updateEmployee(i, { hourlyWage: Number(e.target.value) || 0 })}
+                  <NumberInput placeholder="11,000"
+                    value={emp.hourlyWage || 0}
+                    onChange={n => updateEmployee(i, { hourlyWage: n })}
                   />
                 </Field>
                 <Field label="주 소정근로시간">
@@ -574,7 +558,7 @@ function SegToggle({
   active, onChange,
 }: { active: 'simple' | 'detail'; onChange: (m: 'simple' | 'detail') => void }) {
   return (
-    <div style={{ display: 'inline-flex', border: '1px solid var(--tb-line)', borderRadius: 6, padding: 2, background: '#F5F7FA' }}>
+    <div style={{ display: 'inline-flex', border: '1px solid var(--tb-line)', borderRadius: 6, padding: 2, background: 'var(--tb-card)' }}>
       {(['simple', 'detail'] as const).map(k => (
         <button
           key={k}
@@ -612,30 +596,18 @@ function Step4({
         매출과 무관하게 매달 나가는 비용입니다.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="grid-2col">
         <Field label="월 임대료 (원)">
-          <Input lg type="number" min={0} placeholder="2,800,000"
-            value={fc.monthlyRent || ''}
-            onChange={e => setFc({ monthlyRent: Number(e.target.value) || 0 })}
-          />
+          <NumberInput lg placeholder="2,800,000" value={fc.monthlyRent} onChange={n => setFc({ monthlyRent: n })} />
         </Field>
         <Field label="월 관리비·공과금 (원)">
-          <Input lg type="number" min={0} placeholder="350,000"
-            value={fc.managementFee || ''}
-            onChange={e => setFc({ managementFee: Number(e.target.value) || 0 })}
-          />
+          <NumberInput lg placeholder="350,000" value={fc.managementFee} onChange={n => setFc({ managementFee: n })} />
         </Field>
         <Field label="월 마케팅비 (원)">
-          <Input lg type="number" min={0} placeholder="500,000"
-            value={fc.marketingCost || ''}
-            onChange={e => setFc({ marketingCost: Number(e.target.value) || 0 })}
-          />
+          <NumberInput lg placeholder="500,000" value={fc.marketingCost} onChange={n => setFc({ marketingCost: n })} />
         </Field>
         <Field label="월 기타 비용 (원)">
-          <Input lg type="number" min={0} placeholder="200,000"
-            value={fc.miscCost || ''}
-            onChange={e => setFc({ miscCost: Number(e.target.value) || 0 })}
-          />
+          <NumberInput lg placeholder="200,000" value={fc.miscCost} onChange={n => setFc({ miscCost: n })} />
         </Field>
       </div>
 
@@ -658,10 +630,6 @@ function Step4({
           />
         )}
       </Box>
-
-      <div style={{ marginTop: 16 }}>
-        <PendingMarker>감가상각 / 배달 수수료 입력 필드 추가 합의 필요 (백엔드 FixedCostDto TODO)</PendingMarker>
-      </div>
     </div>
   );
 }
@@ -685,7 +653,7 @@ function Step5({
         마지막 단계예요. 가정값으로 시뮬레이션이 진행됩니다.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div className="grid-2col">
         <Field label="예상 일 판매량 (개)" required>
           <Input lg type="number" min={0} placeholder="35"
             value={sa.expectedDailySales || ''}
@@ -749,35 +717,25 @@ function Step5({
         {baseline && (
           <>
             <hr style={{ height: 1, background: 'var(--tb-line)', border: 0, margin: '14px 0' }} />
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="grid-2col" style={{ gap: 12 }}>
               <Field label="현재 월매출 (원)">
-                <Input type="number" min={0} placeholder="18,000,000"
-                  value={baseline.currentMonthlyRevenue || ''}
-                  onChange={e => setForm(f => ({
-                    ...f,
-                    finance: {
-                      ...f.finance,
-                      baselineProfit: { ...f.finance.baselineProfit!, currentMonthlyRevenue: Number(e.target.value) || 0 }
-                    }
-                  }))} />
+                <NumberInput placeholder="18,000,000"
+                  value={baseline.currentMonthlyRevenue}
+                  onChange={n => setForm(f => ({ ...f, finance: { ...f.finance, baselineProfit: { ...f.finance.baselineProfit!, currentMonthlyRevenue: n } } }))}
+                />
               </Field>
               <Field label="현재 월 영업이익 (원)">
-                <Input type="number" min={0} placeholder="4,200,000"
-                  value={baseline.currentMonthlyOperatingProfit || ''}
-                  onChange={e => setForm(f => ({
-                    ...f,
-                    finance: {
-                      ...f.finance,
-                      baselineProfit: { ...f.finance.baselineProfit!, currentMonthlyOperatingProfit: Number(e.target.value) || 0 }
-                    }
-                  }))} />
+                <NumberInput placeholder="4,200,000"
+                  value={baseline.currentMonthlyOperatingProfit}
+                  onChange={n => setForm(f => ({ ...f, finance: { ...f.finance, baselineProfit: { ...f.finance.baselineProfit!, currentMonthlyOperatingProfit: n } } }))}
+                />
               </Field>
             </div>
           </>
         )}
       </Box>
 
-      <div style={{ marginTop: 24, padding: '12px 14px', background: 'var(--tb-canvas)', borderRadius: 8, fontSize: 12 }}>
+      <div style={{ marginTop: 24, padding: '12px 14px', background: 'var(--tb-card)', borderRadius: 8, fontSize: 12 }}>
         <input type="checkbox" defaultChecked id="agree" style={{ marginRight: 8 }} />
         <label htmlFor="agree">
           <a href="/terms" target="_blank" style={{ color: 'var(--tb-navy)', textDecoration: 'underline' }}>이용약관</a> 및&nbsp;

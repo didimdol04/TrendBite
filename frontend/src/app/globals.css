@@ -11,7 +11,8 @@
   --tb-amber: #E0A800;
   --tb-amber-soft: #FFF4D4;
   --tb-bg: #FFFFFF;
-  --tb-canvas: #F5F7FA;
+  --tb-canvas: #FFFFFF;
+  --tb-card: #F5F7FA;
   --tb-line: #D8DDE6;
   --tb-line-2: #E8EBF0;
   --tb-ink: #1F2937;
@@ -74,7 +75,7 @@ a { color: inherit; text-decoration: none; }
   font-size: 12.5px; color: var(--tb-ink); font-weight: 500;
   transition: background 0.15s;
 }
-.wf-btn:hover { background: var(--tb-canvas); }
+.wf-btn:hover { background: var(--tb-card); }
 .wf-btn-primary { background: var(--tb-navy); border-color: var(--tb-navy); color: #fff; font-weight: 600; }
 .wf-btn-primary:hover { background: var(--tb-navy-2); }
 .wf-btn-lg { height: 48px; padding: 0 22px; font-size: 14px; }
@@ -142,11 +143,57 @@ a { color: inherit; text-decoration: none; }
 .tb-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--tb-canvas); }
 .tb-main { flex: 1; }
 
-/* responsive */
+/* 2컬럼 그리드 — 모바일에서 1컬럼으로 */
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ===== responsive ===== */
 @media (max-width: 768px) {
-  .wf-h1 { font-size: 22px; }
+  .wf-h1 { font-size: 20px; }
+  .wf-h2 { font-size: 16px; }
   .hide-mobile { display: none !important; }
+
+  /* 2컬럼 → 1컬럼 */
+  .grid-2col { grid-template-columns: 1fr; gap: 12px; }
+
+  /* 헤더 패딩 축소 */
+  .tb-page > header { padding: 0 16px !important; }
+
+  /* 버튼 크기 조정 */
+  .wf-btn-lg { height: 44px; padding: 0 18px; font-size: 13px; }
+
+  /* 결과 페이지 섹션 패딩 */
+  .result-section { padding: clamp(20px, 4vw, 40px) 16px !important; }
+
+  /* 카드 패딩 축소 */
+  .wf-box { border-radius: 8px; }
 }
 @media (min-width: 769px) {
   .hide-desktop { display: none !important; }
+}
+
+/* ===== print ===== */
+@media print {
+  /* 헤더·푸터·네비 숨김 */
+  header, footer, nav, aside { display: none !important; }
+
+  /* 플로팅 버튼·토스트 숨김 */
+  .no-print { display: none !important; }
+
+  /* 배경색 유지 (Webkit) */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  body { background: #fff; }
+
+  /* 섹션 페이지 분리 방지 */
+  .wf-box { break-inside: avoid; }
+
+  /* 링크 URL 숨김 */
+  a[href]::after { content: none !important; }
+
+  /* 여백 */
+  @page { margin: 20mm 15mm; }
 }

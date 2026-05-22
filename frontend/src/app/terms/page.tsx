@@ -6,11 +6,11 @@ export default function TermsPage() {
       <div className="wf-eyebrow" style={{ marginBottom: 8 }}>LEGAL · 이용약관</div>
       <h1 className="wf-h1" style={{ marginBottom: 8 }}>이용약관</h1>
       <p className="wf-muted" style={{ marginBottom: 24, fontSize: 12.5 }}>
-        최종 수정일: 2026-05-19 (데모용 placeholder)
+        최종 수정일: 2026-05-22 (데모용 placeholder)
       </p>
 
       <div style={{ marginBottom: 24 }}>
-        <PendingMarker>약관 본문 작성 필요 — 5/20 회의 논의 항목</PendingMarker>
+        <PendingMarker>약관 본문 작성 필요</PendingMarker>
       </div>
 
       <section style={{ marginBottom: 24 }}>
