@@ -43,4 +43,8 @@ public class TrendResponse {
 
     @JsonProperty("similar_patterns")
     private List<SimilarPattern> similarPatterns;
+
+    /** 14개월 raw 관심도 시계열. FastAPI 신규 필드 — 옛 응답에서는 null. */
+    @JsonProperty("interest_series")
+    private List<Double> interestSeries;
 }

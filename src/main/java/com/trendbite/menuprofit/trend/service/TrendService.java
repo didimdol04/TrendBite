@@ -32,6 +32,8 @@ public class TrendService {
 
     private static final TypeReference<List<SimilarPattern>> SIMILAR_PATTERNS_TYPE =
             new TypeReference<>() {};
+    private static final TypeReference<List<Double>> DOUBLE_LIST_TYPE =
+            new TypeReference<>() {};
 
     private final FastApiTrendClient            fastApiTrendClient;
     private final TrendAnalysisCacheRepository  cacheRepository;
@@ -72,6 +74,16 @@ public class TrendService {
         return keywordRepository.findAllByOrderBySearchCountDesc(PageRequest.of(0, limit));
     }
 
+    /**
+     * 키워드 부분 일치 자동완성.
+     * 빈 query 는 빈 리스트 반환 (전체 키워드 조회 막기).
+     * 결과는 검색 카운트 DESC, 최대 20개.
+     */
+    public List<String> searchKeywords(String q) {
+        if (q == null || q.isBlank()) return Collections.emptyList();
+        return keywordRepository.findKeywordsBySubstring(q.trim(), PageRequest.of(0, 20));
+    }
+
     public List<TrendPattern> getAllPatterns() {
         return patternRepository.findAll();
     }
@@ -93,15 +105,20 @@ public class TrendService {
 
     private void saveCache(String keyword, String category, TrendResponse response, LocalDateTime now) {
         String similarJson;
+        String seriesJson;
         try {
             List<SimilarPattern> patterns = response.getSimilarPatterns() != null
                     ? response.getSimilarPatterns()
                     : Collections.emptyList();
             similarJson = objectMapper.writeValueAsString(patterns);
+            seriesJson = response.getInterestSeries() != null
+                    ? objectMapper.writeValueAsString(response.getInterestSeries())
+                    : null;
         } catch (JsonProcessingException e) {
-            // 캐시 저장 실패는 비즈니스 흐름을 막지 않는다 — 로그만 남기고 빈 배열.
-            log.warn("[TrendService] similar_patterns 직렬화 실패: {}", e.getMessage());
+            // 캐시 저장 실패는 비즈니스 흐름을 막지 않는다 — 로그만 남기고 빈 배열/null.
+            log.warn("[TrendService] 캐시 직렬화 실패: {}", e.getMessage());
             similarJson = "[]";
+            seriesJson = null;
         }
 
         TrendAnalysisCache cache = TrendAnalysisCache.builder()
@@ -118,6 +135,7 @@ public class TrendService {
                 .trendScore(response.getTrendScore())
                 .recommendation(response.getRecommendation())
                 .similarPatternsJson(similarJson)
+                .interestSeriesJson(seriesJson)
                 .createdAt(now)
                 .expiresAt(now.plusHours(cacheTtlHours))
                 .build();
@@ -125,16 +143,19 @@ public class TrendService {
     }
 
     private TrendResponse toResponse(TrendAnalysisCache cache) {
-        List<SimilarPattern> patterns;
+        List<SimilarPattern> patterns = Collections.emptyList();
+        List<Double> series = null;
         try {
-            patterns = cache.getSimilarPatternsJson() == null
-                    ? Collections.emptyList()
-                    : objectMapper.readValue(cache.getSimilarPatternsJson(), SIMILAR_PATTERNS_TYPE);
+            if (cache.getSimilarPatternsJson() != null) {
+                patterns = objectMapper.readValue(cache.getSimilarPatternsJson(), SIMILAR_PATTERNS_TYPE);
+            }
+            if (cache.getInterestSeriesJson() != null) {
+                series = objectMapper.readValue(cache.getInterestSeriesJson(), DOUBLE_LIST_TYPE);
+            }
         } catch (JsonProcessingException e) {
-            // 역직렬화 실패는 캐시 데이터 손상 — 빈 리스트로 폴백.
-            log.warn("[TrendService] similar_patterns 역직렬화 실패 cacheId={}, msg={}",
+            // 역직렬화 실패는 캐시 데이터 손상 — 빈 리스트/null 로 폴백.
+            log.warn("[TrendService] 캐시 역직렬화 실패 cacheId={}, msg={}",
                     cache.getId(), e.getMessage());
-            patterns = Collections.emptyList();
         }
         return TrendResponse.builder()
                 .plcStage(cache.getPlcStage())
@@ -148,6 +169,7 @@ public class TrendService {
                 .trendScore(cache.getTrendScore())
                 .recommendation(cache.getRecommendation())
                 .similarPatterns(patterns)
+                .interestSeries(series)
                 .build();
     }
 }

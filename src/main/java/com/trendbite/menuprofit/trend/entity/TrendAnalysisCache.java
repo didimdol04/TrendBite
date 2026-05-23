@@ -65,6 +65,11 @@ public class TrendAnalysisCache {
     @Column(name = "similar_patterns_json", columnDefinition = "TEXT")
     private String similarPatternsJson;
 
+    /** 14개월 관심도 시계열 직렬화 JSON 배열 — 예: "[10.6,13.8,...]" */
+    @Lob
+    @Column(name = "interest_series_json", columnDefinition = "TEXT")
+    private String interestSeriesJson;
+
     // ── 캐시 메타 ──────────────────────────────────────────────
     @Column(nullable = false)
     private LocalDateTime createdAt;

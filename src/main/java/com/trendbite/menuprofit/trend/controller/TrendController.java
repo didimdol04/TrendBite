@@ -42,6 +42,16 @@ public class TrendController {
         return ResponseEntity.ok(body);
     }
 
+    /**
+     * GET /api/v1/trend/search-keywords?q=마라 — 키워드 부분 일치 자동완성.
+     * 빈 q → 빈 배열. 결과는 카운트 DESC, 최대 20개.
+     */
+    @GetMapping("/search-keywords")
+    public ResponseEntity<List<String>> searchKeywords(
+            @RequestParam(defaultValue = "") String q) {
+        return ResponseEntity.ok(trendService.searchKeywords(q));
+    }
+
     /** GET /api/v1/trend/patterns — DTW 비교 기준 시드 패턴 전체 */
     @GetMapping("/patterns")
     public ResponseEntity<List<TrendPatternResponse>> patterns() {

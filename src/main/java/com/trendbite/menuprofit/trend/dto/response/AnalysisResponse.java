@@ -30,6 +30,11 @@ public class AnalysisResponse {
 
     @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
     public static class DataDto {
+        /**
+         * 분석 시 저장된 Menu 엔티티 ID — 후속 /sales/record 호출 시 사용.
+         * Menu 저장 실패 시 null (분석 자체는 성공 응답으로 진행).
+         */
+        private Long                     menuId;
         private LocationAnalysisResponse location;
         private FinanceResponseDto       finance;
         private TrendResponse            trend;
