@@ -24,7 +24,7 @@ import {
 import { toast } from '@/components/Toast';
 
 export const MOCK_MODE = false;
-export const MOCK_FALLBACK = true;
+export const MOCK_FALLBACK = false;
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));

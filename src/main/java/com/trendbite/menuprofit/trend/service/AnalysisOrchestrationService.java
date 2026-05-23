@@ -219,10 +219,24 @@ public class AnalysisOrchestrationService {
 
         FinanceResponseDto.MonthlyResultDto monthly   = finance.getData().getMonthlyResult();
         FinanceResponseDto.BreakEvenDto     breakEven = finance.getData().getBreakEven();
+
+        // FastAPI FinanceSummary 의 3 필드는 모두 required(int/long/float).
+        // FinanceService 는 공헌이익 <= 0 인 경우 bepQty 를 null 로 반환하는데,
+        // 그대로 FastAPI 에 보내면 422. 의미 보존하면서 통과시키기 위해:
+        //   - bepQty=null  → 999_999 (사실상 도달 불가 = "사업성 매우 낮음" 시그널.
+        //                    risk_factors 의 'bep > 400' 조건도 자동 트리거됨)
+        //   - operatingProfit/profitMargin 은 현재 null 안 나오지만 방어적으로 0 fallback
+        Long    operatingProfit = monthly.getOperatingProfit() != null
+                ? monthly.getOperatingProfit() : 0L;
+        Integer bepQty          = breakEven.getBreakEvenQuantityPerDay() != null
+                ? breakEven.getBreakEvenQuantityPerDay() : 999_999;
+        Double  profitMargin    = monthly.getProfitMargin() != null
+                ? monthly.getProfitMargin() : 0.0;
+
         ReportRequest.FinanceSummary summary = ReportRequest.FinanceSummary.builder()
-                .operatingProfit(monthly.getOperatingProfit())
-                .bepQty(breakEven.getBreakEvenQuantityPerDay())
-                .profitMargin(monthly.getProfitMargin())
+                .operatingProfit(operatingProfit)
+                .bepQty(bepQty)
+                .profitMargin(profitMargin)
                 .build();
 
         return ReportRequest.builder()
