@@ -28,13 +28,26 @@ public class TrendPatternSeedInitializer implements CommandLineRunner {
 
     private record SeedPattern(String name, String lifecycle, List<Integer> series) {}
 
+    /**
+     * FastAPI trend.py PAST_PATTERNS 와 동기화 (2026-05 기준).
+     * 14개월 정점 ±7 윈도우, 메뉴별 max=100 으로 재정규화한 실 네이버 데이터랩 값.
+     * Spring 측에서는 series 가 외부 노출 안 되므로 정수 반올림 사용.
+     */
     private static final List<SeedPattern> SEEDS = List.of(
-            new SeedPattern("탕후루",      "단기급락",
-                    List.of(5, 10, 40, 100, 80, 40, 20, 10, 5, 2, 1, 1)),
-            new SeedPattern("흑당버블티",   "유행후정체",
-                    List.of(10, 30, 80, 100, 90, 70, 50, 40, 30, 25, 20, 20)),
-            new SeedPattern("마라탕",      "지속성장",
-                    List.of(10, 15, 25, 40, 55, 70, 85, 95, 100, 98, 97, 99))
+            new SeedPattern("탕후루",       "단기급락",
+                    List.of(11, 14, 16, 31, 44, 71, 100, 97, 60, 34, 29, 26, 24, 15)),
+            new SeedPattern("두바이초콜릿", "단기급락",
+                    List.of(0,  0,  0,  0,  15, 51, 100, 54, 27, 13, 8,  6,  5,  6)),
+            new SeedPattern("달고나커피",   "유행후정체",
+                    List.of(1,  3,  100, 53, 12, 4,  2,   1,  1,  1,  1,  1,  1,  1)),
+            new SeedPattern("붕어빵",       "계절성",
+                    List.of(9,  8,  11, 15, 54, 88, 100, 55, 26, 15, 11, 9,  7,  8)),
+            new SeedPattern("키토김밥",     "안정정착",
+                    List.of(43, 43, 43, 46, 42, 55, 100, 31, 24, 28, 26, 30, 32, 36)),
+            new SeedPattern("마라탕",       "지속성장",
+                    List.of(67, 74, 82, 88, 90, 95, 100, 83, 82, 93, 78, 82, 85, 88)),
+            new SeedPattern("약과",         "재유행",
+                    List.of(29, 49, 48, 32, 38, 44, 100, 60, 64, 69, 54, 39, 30, 33))
     );
 
     @Override
