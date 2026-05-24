@@ -88,7 +88,7 @@ export function NicknameGate({
         <Field label="가게명" required>
           <Input
             lg
-            placeholder="예: 두쫀쿠분식"
+            placeholder="예: 맛나분식"
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}

@@ -301,6 +301,7 @@ function TrendSection({ data, noTrend }: { data: AnalysisResponse['data']; noTre
           <Chip>전체 {t.overall_trend}</Chip>
           <Chip>최근 {t.recent_trend}</Chip>
           <Chip>속도 {t.trend_speed}</Chip>
+          <Chip tone="amber">추천: {t.recommendation}</Chip>
         </div>
       </div>
 
@@ -329,14 +330,17 @@ function TrendSection({ data, noTrend }: { data: AnalysisResponse['data']; noTre
           <div className="wf-h3" style={{ marginBottom: 8 }}>
             월별 관심도 <span className="wf-mono">네이버 데이터랩</span>
           </div>
-          {/* 데모: trend_score를 단순 시계열로 가시화 (실제 시계열은 백엔드 응답에 없음) */}
           <SketchLine
             width={380} height={150}
-            data={fakeMonthlySeriesFromScore(t.trend_score, t.peak_ratio)}
+            data={t.interest_series && t.interest_series.length > 0
+              ? t.interest_series
+              : fakeMonthlySeriesFromScore(t.trend_score, t.peak_ratio)}
             fill
           />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-            <span className="wf-mono">12개월 전</span>
+            <span className="wf-mono">
+              {t.interest_series?.length ? `${t.interest_series.length}개월 전` : '12개월 전'}
+            </span>
             <span className="wf-mono">현재</span>
           </div>
         </Box>
@@ -384,12 +388,12 @@ function SimilarPatternCard({ p }: { p: SimilarPattern }) {
 }
 
 const LIFECYCLE_SAMPLE_SERIES: Record<string, number[]> = {
-  '단기급락':   [10, 25, 60, 100, 90, 50, 25, 15, 10],
-  '유행후정체': [15, 40, 80, 100, 80, 60, 50, 45, 42],
-  '계절성':     [20, 40, 60, 80, 60, 30, 20, 40, 70, 80, 60, 30],
-  '안정정착':   [10, 30, 60, 85, 80, 75, 72, 70, 70],
-  '지속성장':   [10, 20, 35, 50, 65, 80, 92, 96, 100],
-  '재유행':     [30, 50, 70, 50, 30, 40, 60, 75, 65],
+  '단기급락':   [10.6, 13.8, 16.0, 30.8, 43.8, 70.9, 100.0, 97.3, 59.7, 34.0, 29.4, 25.9, 24.2, 14.5],
+  '유행후정체': [1.0, 2.6, 100.0, 52.5, 11.9, 3.5, 1.8, 1.3, 1.0, 0.8, 0.6, 0.7, 0.6, 0.5],
+  '계절성':     [8.8, 8.0, 10.8, 14.5, 53.7, 87.7, 100.0, 54.5, 25.5, 14.7, 11.3, 9.1, 7.3, 8.0],
+  '안정정착':   [43.3, 43.3, 43.1, 45.9, 42.2, 54.5, 100.0, 31.2, 24.2, 27.5, 26.4, 29.8, 32.4, 35.9],
+  '지속성장':   [66.7, 73.8, 82.1, 88.3, 89.6, 94.5, 100.0, 83.3, 82.2, 92.6, 78.0, 81.6, 84.7, 87.9],
+  '재유행':     [28.5, 48.8, 47.5, 31.9, 38.4, 43.9, 100.0, 59.6, 63.5, 68.5, 53.8, 39.0, 30.3, 32.5],
 };
 
 function PlcCurve({ current }: { current: string }) {

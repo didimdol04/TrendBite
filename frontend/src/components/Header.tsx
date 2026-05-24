@@ -19,7 +19,6 @@ export default function Header() {
           <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--tb-navy)', letterSpacing: '-0.01em' }}>
             TrendBite
           </span>
-          <span style={{ color: 'var(--tb-ink-3)', fontWeight: 500, fontSize: 12 }}>두쫀쿠</span>
         </Link>
         <nav className="hide-mobile" style={{ display: 'flex', gap: 16, fontSize: 12.5, color: 'var(--tb-ink-2)' }}>
           <Link href="/" style={navStyle(pathname === '/')}>홈</Link>

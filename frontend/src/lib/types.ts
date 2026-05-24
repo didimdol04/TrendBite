@@ -203,6 +203,7 @@ export interface TrendResponse {
   trend_score: number;
   recommendation: string;
   similar_patterns: SimilarPattern[];
+  interest_series?: number[];
 }
 export interface SimilarPattern {
   name: string;

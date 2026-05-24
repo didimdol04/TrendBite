@@ -90,6 +90,7 @@ export const MOCK_ANALYSIS_RESPONSE: AnalysisResponse = {
       growth_rate: -0.87,
       trend_score: 24,
       recommendation: '신중 검토',
+      interest_series: [66.7, 73.8, 82.1, 88.3, 89.6, 94.5, 100.0, 83.3, 82.2, 92.6, 78.0, 81.6, 84.7, 87.9],
       similar_patterns: [
         {
           name: '키토김밥',
@@ -252,9 +253,9 @@ export const CATEGORY_OPTIONS: { value: string; label: string }[] = [
   { value: 'other',  label: '기타' },
 ];
 
-/** 와이어프레임 P1 랜딩의 라이프사이클 미리보기 데이터 (시드 패턴 3종) */
+/** 와이어프레임 P1 랜딩의 라이프사이클 미리보기 데이터 (FastAPI PAST_PATTERNS 실데이터) */
 export const LANDING_LIFECYCLE_SAMPLES = [
-  { name: '탕후루',     label: '단기급락',   data: [5, 10, 40, 100, 80, 40, 20, 10, 5, 2, 1, 1] },
-  { name: '흑당버블티', label: '유행후정체', data: [10, 30, 80, 100, 90, 70, 50, 40, 30, 25, 20, 20] },
-  { name: '마라탕',     label: '지속성장',   data: [10, 15, 25, 40, 55, 70, 85, 95, 100, 98, 97, 99] },
+  { name: '탕후루', label: '단기급락', data: [10.6, 13.8, 16.0, 30.8, 43.8, 70.9, 100.0, 97.3, 59.7, 34.0, 29.4, 25.9, 24.2, 14.5] },
+  { name: '달고나커피', label: '유행후정체', data: [1.0, 2.6, 100.0, 52.5, 11.9, 3.5, 1.8, 1.3, 1.0, 0.8, 0.6, 0.7, 0.6, 0.5] },
+  { name: '마라탕', label: '지속성장', data: [66.7, 73.8, 82.1, 88.3, 89.6, 94.5, 100.0, 83.3, 82.2, 92.6, 78.0, 81.6, 84.7, 87.9] },
 ];
