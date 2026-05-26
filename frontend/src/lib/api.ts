@@ -11,6 +11,7 @@ import type {
   SalesRecordResponse,
   SalesCorrectionResponse,
   TrendKeywordResponse,
+  TrendResponse,
   LifecycleResponse,
   ApiResponse,
 } from './types';
@@ -25,6 +26,36 @@ import { toast } from '@/components/Toast';
 
 export const MOCK_MODE = false;
 export const MOCK_FALLBACK = false;
+
+// 트렌드 건너뜀 임계값 — 매직넘버를 피하고 향후 조정 시 한 곳에서만 수정
+export const TREND_SKIP_SCORE_THRESHOLD = 10;
+export const TREND_SKIP_LATEST_INTEREST_THRESHOLD = 5;
+
+/**
+ * 트렌드 분석 결과가 약해서 건너뛰어야 하는지 판정.
+ *
+ * 판정 순서:
+ *  1. 백엔드 low_volume 플래그 우선 — FastAPI가 기준 키워드(마라탕)와 동반 조회 후 플래그를 내려주면 가장 정확
+ *  2. 플래그 없으면 plc_stage / recommendation / trend_score / latest_interest 프록시로 판정
+ *
+ * null-safe: FastAPI 폴백 시 일부 필드가 런타임에서 null로 올 수 있으므로 명시적으로 처리
+ */
+export function isTrendWeak(trend: TrendResponse | null | undefined): boolean {
+  if (!trend) return true;
+  // 1. 백엔드 플래그 우선 (백엔드가 low_volume 추가 시 이 분기가 최우선으로 동작)
+  if (trend.low_volume != null) return trend.low_volume;
+  // 2. FastAPI가 "데이터 없음"으로 명시한 경우
+  const plcStage = trend.plc_stage as string | null;
+  if (!plcStage || plcStage === '데이터 없음') return true;
+  const recommendation = trend.recommendation as string | null;
+  if (recommendation && recommendation.includes('검색량 없음')) return true;
+  // 3. 점수 임계값 프록시 (마라탕류 지속성장 메뉴는 높게, 신메뉴·저검색량은 매우 낮게 나옴)
+  const trendScore = trend.trend_score as number | null;
+  if (trendScore != null && trendScore < TREND_SKIP_SCORE_THRESHOLD) return true;
+  const latestInterest = trend.latest_interest as number | null;
+  if (latestInterest != null && latestInterest < TREND_SKIP_LATEST_INTEREST_THRESHOLD) return true;
+  return false;
+}
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -68,6 +99,7 @@ export async function getPopularKeywords(limit = 9): Promise<TrendKeywordRespons
 
 // ──────────────────────────────────────────────────────────────
 // GET /api/v1/trend/search-keywords?q=<query>
+// 자동완성 제안 전용 — 결과 유무로 트렌드 분석을 막는 게이트로 쓰지 않는다
 // ──────────────────────────────────────────────────────────────
 export async function searchMenuKeywords(q: string): Promise<string[]> {
   const mockFn = async () => {

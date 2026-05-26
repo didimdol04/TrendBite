@@ -235,6 +235,22 @@ private String llmReport;
 
 ---
 
+### 5. [트렌드 도메인] FastAPI /analyze — 기준 키워드 동반 조회 및 low_volume 플래그 반환
+
+**배경**: 마라탕처럼 검색량이 많은 기준 키워드와 분석 대상을 같은 네이버 데이터랩 keywordGroups 호출에 넣으면,
+동일 정규화 스케일(max=100) 안에서 상대 비율로 저검색 여부를 정확히 판별할 수 있다.
+현재는 키워드 그룹마다 개별 정규화되어 절대 비교가 불가능하므로 신메뉴 판별이 부정확하다.
+
+**요청 항목**:
+- FastAPI `/analyze` 트렌드 조회 시 동일 keywordGroups에 기준 키워드(마라탕 또는 설정 가능한 seed 키워드)를 함께 포함
+- 분석 대상 키워드의 상대 비율 또는 `low_volume: bool` 플래그를 TrendResponse에 추가 반환
+
+**프론트 영향**:
+- `src/lib/types.ts`의 `TrendResponse`에 `low_volume?: boolean | null` 필드 예약 완료
+- `src/lib/api.ts`의 `isTrendWeak()` 헬퍼는 "백엔드 플래그 우선, 없으면 trend_score/latest_interest 임계값 프록시" 순서로 구현되어 있음 — 백엔드가 `low_volume`을 추가하면 프론트 수정 없이 자동 적용됨
+
+---
+
 ## 구현 완료 항목 (프론트)
 
 - `frontend/src/lib/types.ts` — `AnalysisResponse.data.menuId?: number` 추가
@@ -267,6 +283,7 @@ private String llmReport;
 |----|------|------|-----------|------|
 | T1 | `GET /api/v1/trend/search-keywords?q=` 엔드포인트 신규 구현 | ❌ 미구현 | `TrendKeywordRepository` / `TrendService` / `TrendController` | → 항목 1 참고 |
 | T2 | `ReportResponse.java` `@JsonProperty` → `@JsonAlias` 교체 (Spring 직렬화 키 불일치 수정) | ❌ 미구현 | `trend/dto/response/ReportResponse.java` | → 항목 4 참고 |
+| T3 | FastAPI `/analyze` — 기준 키워드(마라탕) 동반 조회 + `low_volume` 플래그 반환 | ❌ 미구현 | FastAPI trend 분석 로직 | → 항목 5 참고 |
 
 ---
 
@@ -300,3 +317,4 @@ private String llmReport;
 2. **F1 + S1** — AnalysisOrchestrationService 리팩토링 + menuId 반환: 실판매 기록 연동 전제 조건
 3. **T1** — search-keywords 엔드포인트: 메뉴명 자동완성 기능
 4. **T2** — ReportResponse @JsonAlias: AI 리포트 필드 undefined 수정
+5. **T3** — FastAPI 기준 키워드 동반 조회 + low_volume 플래그: 신메뉴 트렌드 건너뜀 정확도 향상 (프론트는 플래그 준비 완료)

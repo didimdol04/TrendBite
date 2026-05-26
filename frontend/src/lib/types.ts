@@ -204,6 +204,7 @@ export interface TrendResponse {
   recommendation: string;
   similar_patterns: SimilarPattern[];
   interest_series?: number[];
+  low_volume?: boolean | null; // 백엔드 확장 예정 — FastAPI가 기준 키워드 동반 조회 후 저검색량 여부를 플래그로 반환하면 isTrendWeak가 이를 우선 사용
 }
 export interface SimilarPattern {
   name: string;

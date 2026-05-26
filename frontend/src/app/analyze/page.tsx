@@ -7,7 +7,8 @@ import { AddressInput } from '@/components/AddressInput';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { useWizardForm } from '@/lib/wizardForm';
 import { useUser } from '@/lib/userContext';
-import { runAnalysis, searchMenuKeywords } from '@/lib/api';
+import { runAnalysis, searchMenuKeywords, isTrendWeak } from '@/lib/api';
+import { toast } from '@/components/Toast';
 import { CATEGORY_OPTIONS } from '@/lib/mockData';
 import type { EmployeeDto, AnalysisRequest } from '@/lib/types';
 
@@ -37,7 +38,8 @@ function AnalyzeInner() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0); // 0~3: 입지/재무/트렌드/AI
-  const [partialMode, setPartialMode] = useState(false);
+  // 사용자가 Step1에서 명시적으로 트렌드를 건너뛰기로 선택했을 때만 true — 타이핑 결과로 자동 설정 안 함
+  const [userForceSkipTrend, setUserForceSkipTrend] = useState(false);
 
   // 인기 키워드에서 진입 시 자동 채움
   useEffect(() => {
@@ -72,13 +74,21 @@ function AnalyzeInner() {
       clearInterval(stepInterval);
       setLoadingStep(3); // 마지막 단계까지 표시
       await new Promise(r => setTimeout(r, 400));
+
+      // 분석 결과 기반 트렌드 건너뜀 최종 판정
+      const backendTrendWeak = isTrendWeak(res.data.trend);
+      const finalNoTrend = userForceSkipTrend || backendTrendWeak;
+      if (backendTrendWeak && !userForceSkipTrend) {
+        toast.info('네이버 데이터랩 검색량이 기준치보다 낮아 트렌드 분석을 건너뜁니다. 입지·재무 중심으로 평가했어요.');
+      }
+
       if (state.kind === 'identified') {
         const saved = saveAnalysis({
           menuName: form.finance.menuInfo.menuName || form.keyword,
           category: form.category,
           address: form.location.address,
           data: res.data,
-          noTrend: partialMode,
+          noTrend: finalNoTrend,
           menuId: res.data.menuId,
           originalRequest: form,
         });
@@ -92,7 +102,7 @@ function AnalyzeInner() {
           address: form.location.address,
           data: res.data,
           createdAt: new Date().toISOString(),
-          noTrend: partialMode,
+          noTrend: finalNoTrend,
         }));
         reset();
         router.push('/result/guest');
@@ -165,7 +175,7 @@ function AnalyzeInner() {
         </aside>
 
         <main className="wizard-body">
-          {step === 0 && <Step1 form={form} setForm={setForm} onPartialModeChange={setPartialMode} />}
+          {step === 0 && <Step1 form={form} setForm={setForm} onUserForceSkipTrend={setUserForceSkipTrend} userForceSkipTrend={userForceSkipTrend} />}
           {step === 1 && <Step2 form={form} setForm={setForm} />}
           {step === 2 && <Step3 form={form} setForm={setForm} />}
           {step === 3 && <Step4 form={form} setForm={setForm} />}
@@ -236,11 +246,12 @@ function FormBar({
 // Step 1: 메뉴 정보 + 키워드 매칭 후보 드롭다운
 // ────────────────────────────────────────────────────────
 function Step1({
-  form, setForm, onPartialModeChange,
+  form, setForm, onUserForceSkipTrend, userForceSkipTrend,
 }: {
   form: AnalysisRequest;
   setForm: React.Dispatch<React.SetStateAction<AnalysisRequest>>;
-  onPartialModeChange: (v: boolean) => void;
+  onUserForceSkipTrend: (v: boolean) => void;
+  userForceSkipTrend: boolean;
 }) {
   const [candidates, setCandidates] = useState<string[]>([]);
   const [noDataMode, setNoDataMode] = useState(false);
@@ -260,20 +271,17 @@ function Step1({
     if (!name.trim()) {
       setCandidates([]);
       setNoDataMode(false);
-      onPartialModeChange(false);
+      onUserForceSkipTrend(false);
       return;
     }
     try {
+      // searchMenuKeywords는 자동완성 제안 용도만 — 결과 유무로 트렌드 분석을 막지 않음
       const results = await searchMenuKeywords(name.trim());
       setCandidates(results);
-      const empty = results.length === 0;
-      setNoDataMode(empty);
-      onPartialModeChange(empty);
+      setNoDataMode(results.length === 0);
     } catch {
-      // 키워드 검색 API 실패 시 → 트렌드 데이터 없음으로 처리
       setCandidates([]);
       setNoDataMode(true);
-      onPartialModeChange(true);
     }
   };
 
@@ -322,17 +330,37 @@ function Step1({
               ))}
             </div>
           )}
-          {/* 트렌드 데이터 없음 — 부분 분석 모드 안내 */}
-          {noDataMode && (
+          {/* 아직 분석된 적 없는 메뉴 — 부드러운 안내 (트렌드는 분석 후 결과 기반으로 판단) */}
+          {noDataMode && !isExactMatch && (
             <div style={{
-              marginTop: 8, padding: '12px 14px',
-              background: 'var(--tb-amber-soft)',
-              border: '1px solid #E0A800',
+              marginTop: 8, padding: '14px 16px',
+              background: 'var(--tb-card)',
+              border: '1px solid var(--tb-line)',
               borderRadius: 'var(--tb-radius-sm)',
-              fontSize: 12.5, color: '#806100',
+              fontSize: 12.5,
             }}>
-              <div style={{ fontWeight: 700, marginBottom: 4 }}>TrendBite에 등록된 트렌드 데이터가 없어요</div>
-              입지 + 재무 분석만 진행됩니다. 결과 페이지 트렌드 섹션은 N/A로 표시됩니다.
+              <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--tb-ink)' }}>
+                이 메뉴는 아직 분석된 적 없어요
+              </div>
+              <div style={{ color: 'var(--tb-ink-2)', marginBottom: 10, lineHeight: 1.55 }}>
+                그대로 분석을 진행하면 네이버 데이터랩에서 트렌드를 새로 조회합니다.
+                검색량이 충분하지 않으면 입지·재무만 표시돼요.
+              </div>
+              <button
+                onClick={() => onUserForceSkipTrend(!userForceSkipTrend)}
+                style={{
+                  background: userForceSkipTrend ? 'var(--tb-navy)' : 'transparent',
+                  border: '1px solid var(--tb-navy)',
+                  color: userForceSkipTrend ? '#fff' : 'var(--tb-navy)',
+                  borderRadius: 6,
+                  padding: '5px 12px',
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {userForceSkipTrend ? '✓ 트렌드 건너뛰기 선택됨' : '트렌드 건너뛰고 입지·재무만 분석'}
+              </button>
             </div>
           )}
           {/* 정확히 매칭됨 */}
