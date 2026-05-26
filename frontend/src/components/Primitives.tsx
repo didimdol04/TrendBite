@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 export const Box = ({
   children, style, className = '', dashed = false, ...rest
@@ -94,11 +94,7 @@ export const PendingBox = ({ title, children }: { title: string; children: React
   </div>
 );
 
-/**
- * 천 단위 콤마 입력 필드.
- * - 포커스 중: 숫자만 입력 (콤마 자동 제거)
- * - 블러 시: toLocaleString으로 콤마 포맷
- */
+// 천 단위 콤마 입력 필드 — 타이핑 중에도 실시간으로 콤마가 표시됨
 export function NumberInput({
   value, onChange, lg, style, ...rest
 }: {
@@ -106,23 +102,56 @@ export function NumberInput({
   onChange: (n: number) => void;
   lg?: boolean;
 } & Omit<React.InputHTMLAttributes<HTMLInputElement>, 'value' | 'onChange' | 'type' | 'onFocus' | 'onBlur'>) {
-  const [focused, setFocused] = useState(false);
-  const [raw, setRaw] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+  const isFocused = useRef(false);
+  const [display, setDisplay] = useState(() => value ? value.toLocaleString('ko-KR') : '');
+
+  useEffect(() => {
+    if (!isFocused.current) {
+      setDisplay(value ? value.toLocaleString('ko-KR') : '');
+    }
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    const selStart = e.target.selectionStart ?? raw.length;
+    const digitsBeforeCursor = raw.slice(0, selStart).replace(/\D/g, '').length;
+
+    const digits = raw.replace(/\D/g, '');
+    const num = Number(digits) || 0;
+    const formatted = digits ? num.toLocaleString('ko-KR') : '';
+
+    setDisplay(formatted);
+    onChange(num);
+
+    // 콤마 삽입으로 인한 커서 밀림 보정
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      let count = 0;
+      let pos = formatted.length;
+      for (let i = 0; i < formatted.length; i++) {
+        if (/\d/.test(formatted[i])) count++;
+        if (count === digitsBeforeCursor) { pos = i + 1; break; }
+      }
+      el.setSelectionRange(pos, pos);
+    });
+  };
 
   return (
     <input
+      ref={inputRef}
       className={'wf-input' + (lg ? ' wf-input-lg' : '')}
       type="text"
       inputMode="numeric"
       style={style}
-      value={focused ? raw : (value ? value.toLocaleString('ko-KR') : '')}
-      onFocus={() => { setFocused(true); setRaw(value ? String(value) : ''); }}
-      onBlur={() => { setFocused(false); onChange(Number(raw) || 0); }}
-      onChange={(e) => {
-        const digits = e.target.value.replace(/[^0-9]/g, '');
-        setRaw(digits);
-        onChange(Number(digits) || 0);
+      value={display}
+      onFocus={() => { isFocused.current = true; }}
+      onBlur={() => {
+        isFocused.current = false;
+        onChange(Number(display.replace(/\D/g, '')) || 0);
       }}
+      onChange={handleChange}
       {...rest}
     />
   );

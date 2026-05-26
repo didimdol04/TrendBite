@@ -232,9 +232,9 @@ function ScoreBreakdownSection({ data, noTrend }: { data: AnalysisResponse['data
         </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-        {/* 트렌드 점수 — noTrend 시 회색 N/A */}
+        {/* 트렌드 점수 — noTrend 또는 FastAPI 실패(plc_stage=null) 시 회색 N/A */}
         <Box style={{ padding: 18 }}>
-          {noTrend ? (
+          {(noTrend || data.trend.plc_stage == null) ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                 <span className="wf-h3">트렌드</span>
@@ -261,7 +261,11 @@ function ScoreBreakdownSection({ data, noTrend }: { data: AnalysisResponse['data
 // Trend Section
 // ────────────────────────────────────────────────────────
 function TrendSection({ data, noTrend }: { data: AnalysisResponse['data']; noTrend?: boolean }) {
-  if (noTrend) {
+  const t = data.trend;
+  // FastAPI 실패 폴백 시 plc_stage 등 숫자 필드가 null로 오는 경우를 noTrend와 동일 처리
+  const trendUnavailable = noTrend || t.plc_stage == null || t.latest_interest == null;
+
+  if (trendUnavailable) {
     return (
       <section style={{ padding: 'clamp(24px, 4vw, 32px) clamp(20px, 6vw, 80px)', background: 'var(--tb-card)' }}>
         <div style={{ marginBottom: 16 }}>
@@ -285,8 +289,6 @@ function TrendSection({ data, noTrend }: { data: AnalysisResponse['data']; noTre
       </section>
     );
   }
-
-  const t = data.trend;
   const plcStage = t.plc_stage;
 
   return (

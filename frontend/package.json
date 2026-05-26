@@ -15,9 +15,11 @@
     "react-hot-toast": "^2.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "playwright": "^1.60.0",
     "typescript": "^5.4.5"
   }
 }

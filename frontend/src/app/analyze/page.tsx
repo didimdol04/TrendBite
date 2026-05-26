@@ -263,11 +263,18 @@ function Step1({
       onPartialModeChange(false);
       return;
     }
-    const results = await searchMenuKeywords(name.trim());
-    setCandidates(results);
-    const empty = results.length === 0;
-    setNoDataMode(empty);
-    onPartialModeChange(empty);
+    try {
+      const results = await searchMenuKeywords(name.trim());
+      setCandidates(results);
+      const empty = results.length === 0;
+      setNoDataMode(empty);
+      onPartialModeChange(empty);
+    } catch {
+      // 키워드 검색 API 실패 시 → 트렌드 데이터 없음으로 처리
+      setCandidates([]);
+      setNoDataMode(true);
+      onPartialModeChange(true);
+    }
   };
 
   const inputName = form.finance.menuInfo.menuName.trim();
