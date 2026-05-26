@@ -318,3 +318,112 @@ private String llmReport;
 3. **T1** — search-keywords 엔드포인트: 메뉴명 자동완성 기능
 4. **T2** — ReportResponse @JsonAlias: AI 리포트 필드 undefined 수정
 5. **T3** — FastAPI 기준 키워드 동반 조회 + low_volume 플래그: 신메뉴 트렌드 건너뜀 정확도 향상 (프론트는 플래그 준비 완료)
+6. **D1** — 분석 이력 삭제 엔드포인트: 프론트 삭제 버튼과 연결 (아래 항목 6 참고)
+
+---
+
+---
+
+### 6. [Analysis 도메인] DELETE /api/v1/analysis/{menuId} — 분석 이력 삭제 엔드포인트
+
+**배경**:  
+프론트엔드 이력 페이지(`/history`)에 삭제 버튼이 구현되어 있으며, 버튼 클릭 시 `localStorage`에서는 즉시 삭제된다.  
+백엔드 엔드포인트가 없어 현재는 API 호출을 무시(`catch(() => {})`)하고 있으며, 엔드포인트 구현 후 자동으로 연결된다.
+
+**프론트엔드 연결 지점**:  
+`frontend/src/lib/api.ts` — `deleteAnalysisApi(menuId: number)` 함수
+
+```typescript
+// 이미 구현된 프론트 코드 (수정 불필요)
+export async function deleteAnalysisApi(menuId: number): Promise<void> {
+  if (MOCK_MODE) return;
+  const res = await fetch(`${API_BASE}/api/v1/analysis/${menuId}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 404) {
+    throw new ApiClientError('DELETE_FAILED', '삭제에 실패했습니다.');
+  }
+}
+```
+
+> `404`는 에러로 처리하지 않음 — 이미 삭제된 경우를 정상으로 간주하는 멱등성 처리.
+
+---
+
+#### 구현할 엔드포인트
+
+| 항목 | 내용 |
+|------|------|
+| 메서드 | `DELETE` |
+| 경로 | `/api/v1/analysis/{menuId}` |
+| Path Variable | `menuId` (Long) — 프론트의 `SavedAnalysis.menuId`와 동일한 `Menu` 엔티티 ID |
+| 성공 응답 | `204 No Content` |
+| 없는 ID | `204 No Content` (멱등 처리) 또는 `404 Not Found` (프론트가 둘 다 허용) |
+| 연관 삭제 | `Menu` 삭제 시 `SalesRecord`(판매 기록)도 cascade 삭제 권장 |
+
+---
+
+#### 수정 파일 3곳
+
+##### `analysis/repository/MenuRepository.java` (또는 기존 위치)
+```java
+// 기존 JpaRepository 상속 외 추가 불필요.
+// deleteById(Long id) 는 JpaRepository 기본 제공.
+```
+
+##### `analysis/service/AnalysisService.java` (또는 AnalysisOrchestrationService)
+```java
+// 아래 메서드 추가
+public void deleteAnalysis(Long menuId) {
+    if (!menuRepository.existsById(menuId)) {
+        return; // 없는 경우 정상 처리 (멱등)
+    }
+    // SalesRecord cascade 삭제 — Menu 엔티티에 @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true) 설정 시 자동 처리
+    // cascade 미설정이면 수동으로 salesRecordRepository.deleteByMenuId(menuId) 먼저 실행
+    salesRecordRepository.deleteByMenuId(menuId); // cascade 설정 시 이 줄 제거
+    menuRepository.deleteById(menuId);
+}
+```
+
+> `Menu` 엔티티에 `@OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)` 가 이미 설정되어 있다면 `salesRecordRepository.deleteByMenuId()` 호출 없이 `menuRepository.deleteById(menuId)` 한 줄로 충분.
+
+##### `analysis/controller/AnalysisController.java` (또는 MenuController)
+```java
+// import 추가
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
+// 아래 엔드포인트 추가
+/** DELETE /api/v1/analysis/{menuId} — 분석 이력 삭제 (연관 판매 기록 cascade 삭제) */
+@DeleteMapping("/{menuId}")
+public ResponseEntity<Void> deleteAnalysis(@PathVariable Long menuId) {
+    analysisService.deleteAnalysis(menuId);
+    return ResponseEntity.noContent().build(); // 204
+}
+```
+
+---
+
+#### SalesRecord cascade 삭제 설정 확인
+
+`Menu.java` 엔티티에 아래 관계가 선언되어 있으면 `menuRepository.deleteById()` 한 번으로 판매 기록까지 자동 삭제된다.
+
+```java
+// Menu.java — 이미 있으면 추가 불필요
+@OneToMany(mappedBy = "menu", cascade = CascadeType.ALL, orphanRemoval = true)
+private List<SalesRecord> salesRecords = new ArrayList<>();
+```
+
+cascade 설정이 없으면 `SalesRecordRepository`에 아래 메서드를 추가하고 서비스에서 먼저 호출한다.
+
+```java
+// SalesRecordRepository.java
+void deleteByMenuId(Long menuId);
+```
+
+---
+
+#### 미구현 항목 테이블 추가 (C-3 Analysis 도메인)
+
+| ID | 항목 | 상태 | 대상 파일 | 상세 |
+|----|------|------|-----------|------|
+| D1 | `DELETE /api/v1/analysis/{menuId}` 엔드포인트 구현 + SalesRecord cascade 삭제 | ❌ 미구현 | `AnalysisController` / `AnalysisService` / `MenuRepository` | → 항목 6 참고 |

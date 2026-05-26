@@ -30,6 +30,7 @@ interface Ctx {
   saveAnalysis: (input: { menuName: string; category: string; address?: string; data: AnalysisResponse['data']; noTrend?: boolean; menuId?: number; originalRequest?: SavedAnalysis['originalRequest'] }) => SavedAnalysis;
   getAnalyses: () => SavedAnalysis[];
   getAnalysis: (id: string) => SavedAnalysis | undefined;
+  deleteAnalysis: (id: string) => void;
   saveSalesRecord: (input: Omit<SavedSalesRecord, 'id' | 'userId' | 'createdAt'>) => SavedSalesRecord;
   getSalesRecords: (menuId: number) => SavedSalesRecord[];
 }
@@ -140,6 +141,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     return all.find(a => a.id === id);
   }, []);
 
+  const deleteAnalysis = useCallback((id: string) => {
+    if (state.kind !== 'identified') return;
+    const all = readJson<SavedAnalysis[]>(ANALYSES_KEY, []);
+    const target = all.find(a => a.id === id && a.userId === state.user.id);
+    if (!target) return;
+    writeJson(ANALYSES_KEY, all.filter(a => a.id !== id));
+    const sales = readJson<SavedSalesRecord[]>(SALES_KEY, []);
+    writeJson(SALES_KEY, sales.filter(s => s.menuId !== target.menuId));
+  }, [state]);
+
   const saveSalesRecord: Ctx['saveSalesRecord'] = useCallback((input) => {
     if (state.kind !== 'identified') {
       throw new Error('게스트는 실판매를 기록할 수 없습니다.');
@@ -175,7 +186,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   return (
     <UserContext.Provider value={{
       state, login, logout, isReturning,
-      saveAnalysis, getAnalyses, getAnalysis,
+      saveAnalysis, getAnalyses, getAnalysis, deleteAnalysis,
       saveSalesRecord, getSalesRecords,
     }}>
       {children}

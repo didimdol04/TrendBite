@@ -162,7 +162,7 @@ export function NicknameGate({
           background: '#FFF4D4', border: '1px dashed #E0A800', borderRadius: 6,
           fontSize: 11, color: '#806100',
         }}>
-          🔶 <b>실서비스 합의 필요</b> · 현재 데모는 같은 디바이스 + 같은 가게명 매칭만으로 유저를 식별합니다. 실서비스에선 백엔드 User 엔티티 추가 + 비밀번호 또는 SMS/이메일 인증 필요.
+          🔶 현재는 같은 디바이스 + 같은 가게명 매칭만으로 유저를 식별합니다. 
         </div>
       </Box>
     </div>

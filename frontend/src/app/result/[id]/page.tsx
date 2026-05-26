@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Box, Btn, Badge, Chip, PendingMarker, fmt } from '@/components/Primitives';
+import { Box, Btn, Badge, Chip, fmt } from '@/components/Primitives';
 import type { AnalysisRequest } from '@/lib/types';
 import { SketchLine, SketchDonut, SketchGauge, SketchWaterfall } from '@/components/Charts';
 import { KakaoMap } from '@/components/KakaoMap';
@@ -225,11 +225,8 @@ function ScoreBreakdownSection({ data, noTrend }: { data: AnalysisResponse['data
   ];
   return (
     <section style={{ padding: 'clamp(24px, 4vw, 32px) clamp(20px, 6vw, 80px)', background: '#fff' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+      <div style={{ marginBottom: 16 }}>
         <div className="wf-h2">점수 분해</div>
-        <span className="wf-mono">
-          <PendingMarker>점수 산출 공식 합의 필요 (FastAPI LangGraph)</PendingMarker>
-        </span>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
         {/* 트렌드 점수 — noTrend 또는 FastAPI 실패(plc_stage=null) 시 회색 N/A */}
@@ -655,13 +652,13 @@ function AIReportSection({ data, result }: { data: AnalysisResponse['data']; res
   const { state } = useUser();
   const noTrend = result.noTrend;
 
-  useEffect(() => {
-    if (noTrend) {
-      toast.info('실서비스 시 입지/재무만 기반 LLM 프롬프트 분기 필요');
-    }
-  // 마운트 1회만 실행
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // useEffect(() => {
+  //   if (noTrend) {
+  //     toast.info('실서비스 시 입지/재무만 기반 LLM 프롬프트 분기 필요');
+  //   }
+  // // 마운트 1회만 실행
+  // // eslint-disable-next-line react-hooks/exhaustive-deps
+  // }, []);
 
   const reportText = noTrend
     ? [
@@ -729,7 +726,7 @@ function AIReportSection({ data, result }: { data: AnalysisResponse['data']; res
           </Link>
         )}
         {result.id === 'guest' && (
-          <Btn lg onClick={() => alert('🔶 닉네임 입력 후 저장하기 → 추후 데모 모달로 연결')}>
+          <Btn lg onClick={() => alert('🔶 닉네임 입력 후 저장하기')}>
             💾 닉네임 등록하고 저장
           </Btn>
         )}

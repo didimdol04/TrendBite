@@ -42,7 +42,7 @@ export default function LandingPage() {
         <div className="hero-grid">
           <div>
             <div className="wf-eyebrow" style={{ marginBottom: 14 }}>
-              외식업 신메뉴 의사결정 시뮬레이터
+              외식업 신메뉴 수익성 예측 시뮬레이터
             </div>
             <h1 className="wf-h1" style={{ fontSize: 'clamp(28px, 4vw, 40px)', marginBottom: 16 }}>
               신메뉴 도입,<br />
@@ -76,7 +76,7 @@ export default function LandingPage() {
               ))}
             </div>
             <div style={{ marginTop: 12, fontSize: 12, color: 'var(--tb-navy)', fontWeight: 600 }}>
-              당신의 메뉴는 어디쯤일까요? →
+              당신의 메뉴는 어디쯤일까요?
             </div>
           </Box>
         </div>

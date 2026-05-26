@@ -81,7 +81,7 @@ export const Progress = ({ pct, style }: { pct: number; style?: React.CSSPropert
 );
 
 /**
- * 미결정 항목 마커. 데모에서 "🔶 합의 필요" 영역을 시각적으로 표시.
+ * 미결정 항목 마커. "🔶 합의 필요" 영역을 시각적으로 표시.
  */
 export const PendingMarker = ({ children }: { children: React.ReactNode }) => (
   <span className="pending-marker">🔶 {children}</span>

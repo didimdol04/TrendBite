@@ -213,7 +213,6 @@ export const MOCK_POPULAR_KEYWORDS: TrendKeywordResponse[] = [
   { keyword: '두바이초콜릿', category: 'snack',  searchCount: 1284, lastSearchedAt: '2026-05-18T10:00:00' },
   { keyword: '요아정',       category: 'cafe',   searchCount:  982, lastSearchedAt: '2026-05-18T11:00:00' },
   { keyword: '탕후루',       category: 'snack',  searchCount:  871, lastSearchedAt: '2026-05-17T09:00:00' },
-  { keyword: '마라탕후루',   category: 'dining', searchCount:  705, lastSearchedAt: '2026-05-17T16:00:00' },
   { keyword: '크로플',       category: 'cafe',   searchCount:  612, lastSearchedAt: '2026-05-16T12:00:00' },
   { keyword: '흑임자라떼',   category: 'cafe',   searchCount:  488, lastSearchedAt: '2026-05-16T14:00:00' },
   { keyword: '약과',         category: 'snack',  searchCount:  411, lastSearchedAt: '2026-05-15T10:00:00' },

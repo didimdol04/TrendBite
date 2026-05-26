@@ -27,33 +27,37 @@ import { toast } from '@/components/Toast';
 export const MOCK_MODE = false;
 export const MOCK_FALLBACK = false;
 
-// 트렌드 건너뜀 임계값 — 매직넘버를 피하고 향후 조정 시 한 곳에서만 수정
-export const TREND_SKIP_SCORE_THRESHOLD = 10;
-export const TREND_SKIP_LATEST_INTEREST_THRESHOLD = 5;
+// interest_series에 실데이터가 없을 때만 사용하는 최후 점수 임계값
+// (hockey-stick 신메뉴처럼 series에 값이 있으면 이 임계값은 적용되지 않음)
+export const TREND_SKIP_SCORE_THRESHOLD = 3;
 
 /**
  * 트렌드 분석 결과가 약해서 건너뛰어야 하는지 판정.
  *
  * 판정 순서:
- *  1. 백엔드 low_volume 플래그 우선 — FastAPI가 기준 키워드(마라탕)와 동반 조회 후 플래그를 내려주면 가장 정확
- *  2. 플래그 없으면 plc_stage / recommendation / trend_score / latest_interest 프록시로 판정
+ *  1. 백엔드 low_volume 플래그 우선 — FastAPI가 기준 키워드와 동반 조회 후 플래그를 내려주면 가장 정확
+ *  2. plc_stage / recommendation 으로 명시적 "데이터 없음" 확인
+ *  3. interest_series에 0보다 큰 값이 하나라도 있으면 실데이터 있음 → 통과
+ *     (hockey-stick 패턴: [0,0,...,0,3,8] 같은 신메뉴도 트렌드 섹션을 보여줌)
+ *  4. series도 없을 때만 trend_score 프록시로 최후 판정
  *
  * null-safe: FastAPI 폴백 시 일부 필드가 런타임에서 null로 올 수 있으므로 명시적으로 처리
  */
 export function isTrendWeak(trend: TrendResponse | null | undefined): boolean {
   if (!trend) return true;
-  // 1. 백엔드 플래그 우선 (백엔드가 low_volume 추가 시 이 분기가 최우선으로 동작)
+  // 1. 백엔드 플래그 우선
   if (trend.low_volume != null) return trend.low_volume;
   // 2. FastAPI가 "데이터 없음"으로 명시한 경우
   const plcStage = trend.plc_stage as string | null;
   if (!plcStage || plcStage === '데이터 없음') return true;
   const recommendation = trend.recommendation as string | null;
   if (recommendation && recommendation.includes('검색량 없음')) return true;
-  // 3. 점수 임계값 프록시 (마라탕류 지속성장 메뉴는 높게, 신메뉴·저검색량은 매우 낮게 나옴)
+  // 3. interest_series에 실데이터가 있으면 점수와 무관하게 트렌드 표시
+  const series = trend.interest_series;
+  if (Array.isArray(series) && series.some(v => v > 0)) return false;
+  // 4. series 없을 때만 trend_score 프록시 사용 (임계값 3 — 사실상 전 기간 0에 가까운 경우만)
   const trendScore = trend.trend_score as number | null;
   if (trendScore != null && trendScore < TREND_SKIP_SCORE_THRESHOLD) return true;
-  const latestInterest = trend.latest_interest as number | null;
-  if (latestInterest != null && latestInterest < TREND_SKIP_LATEST_INTEREST_THRESHOLD) return true;
   return false;
 }
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
@@ -118,6 +122,17 @@ export async function getLifecycles(): Promise<LifecycleResponse[]> {
   const mockFn = async () => { await sleep(50); return MOCK_LIFECYCLES; };
   if (MOCK_MODE) return mockFn();
   return withFallback(() => fetchJson<LifecycleResponse[]>('/api/v1/trend/lifecycles'), mockFn);
+}
+
+// ──────────────────────────────────────────────────────────────
+// DELETE /api/v1/analysis/{menuId}
+// ──────────────────────────────────────────────────────────────
+export async function deleteAnalysisApi(menuId: number): Promise<void> {
+  if (MOCK_MODE) return;
+  const res = await fetch(`${API_BASE}/api/v1/analysis/${menuId}`, { method: 'DELETE' });
+  if (!res.ok && res.status !== 404) {
+    throw new ApiClientError('DELETE_FAILED', '삭제에 실패했습니다.');
+  }
 }
 
 // ──────────────────────────────────────────────────────────────

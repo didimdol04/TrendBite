@@ -2,11 +2,17 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Box, Btn, Badge, Input, fmt } from '@/components/Primitives';
+import { Box, Btn, Badge, Input } from '@/components/Primitives';
 import { SketchLine } from '@/components/Charts';
 import { NicknameGate } from '@/components/NicknameGate';
 import { useUser } from '@/lib/userContext';
+import { deleteAnalysisApi } from '@/lib/api';
 import type { SavedAnalysis } from '@/lib/types';
+
+function hasTrendChart(it: SavedAnalysis): boolean {
+  const series = it.response.trend?.interest_series;
+  return !it.noTrend && Array.isArray(series) && series.length >= 2;
+}
 
 const VERDICT_TONE: Record<string, 'navy' | 'amber' | 'grey' | 'dark'> = {
   '도입 권장': 'navy',
@@ -17,10 +23,11 @@ const VERDICT_TONE: Record<string, 'navy' | 'amber' | 'grey' | 'dark'> = {
 
 export default function HistoryPage() {
   const router = useRouter();
-  const { state, getAnalyses, getSalesRecords } = useUser();
+  const { state, getAnalyses, getSalesRecords, deleteAnalysis } = useUser();
   const [items, setItems] = useState<SavedAnalysis[]>([]);
   const [search, setSearch] = useState('');
   const [showGate, setShowGate] = useState(false);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     if (state.kind === 'identified') {
@@ -30,6 +37,16 @@ export default function HistoryPage() {
       setShowGate(true);
     }
   }, [state, getAnalyses]);
+
+  const handleDelete = async (it: SavedAnalysis) => {
+    deleteAnalysis(it.id);
+    setItems(getAnalyses());
+    setConfirmId(null);
+    // 백엔드 연결 시 활성화: menuId가 있을 때만 API 호출, 실패해도 로컬 삭제는 유지
+    if (it.menuId) {
+      deleteAnalysisApi(it.menuId).catch(() => {});
+    }
+  };
 
   const filtered = items.filter(i =>
     !search || i.menuName.toLowerCase().includes(search.toLowerCase())
@@ -116,11 +133,23 @@ export default function HistoryPage() {
                   <Badge tone={VERDICT_TONE[verdict] || 'grey'}>{verdict}</Badge>
                 </div>
                 <div style={{ height: 56, marginBottom: 12 }}>
-                  <SketchLine
-                    width={260} height={56}
-                    data={[20, 35, 45, 50, 60, 70, 65, 72]}
-                    fill
-                  />
+                  {hasTrendChart(it) ? (
+                    <SketchLine
+                      width={260} height={56}
+                      data={it.response.trend.interest_series!}
+                      fill
+                    />
+                  ) : (
+                    <div style={{
+                      height: '100%', display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', gap: 6,
+                      border: '1px dashed var(--tb-line-2)', borderRadius: 4,
+                      color: 'var(--tb-ink-3)', fontSize: 11,
+                    }}>
+                      <span>📉</span>
+                      <span>{it.noTrend ? '트렌드 분석 미포함' : '관심도 데이터 없음'}</span>
+                    </div>
+                  )}
                 </div>
                 <div style={{
                   display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
@@ -132,16 +161,38 @@ export default function HistoryPage() {
                     <span style={{ fontSize: 12, color: 'var(--tb-ink-3)', fontWeight: 500 }}>/100</span>
                   </span>
                 </div>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <Link href={`/result/${it.id}`} style={{ flex: 1 }}>
-                    <Btn style={{ width: '100%', height: 32, fontSize: 11 }}>📄 결과 보기</Btn>
-                  </Link>
-                  <Link href={`/sales-record/${it.menuId}`} style={{ flex: 1 }}>
-                    <Btn style={{ width: '100%', height: 32, fontSize: 11 }}>
-                      📊 실판매 ({salesCount})
-                    </Btn>
-                  </Link>
-                </div>
+                {confirmId === it.id ? (
+                  <div style={{
+                    display: 'flex', gap: 6, alignItems: 'center',
+                    padding: '8px 10px', borderRadius: 6,
+                    background: '#fff5f5', border: '1px solid #fca5a5',
+                  }}>
+                    <span style={{ fontSize: 11, color: '#b91c1c', flex: 1 }}>정말 삭제할까요?</span>
+                    <Btn
+                      onClick={() => handleDelete(it)}
+                      style={{ height: 28, fontSize: 11, background: '#ef4444', color: '#fff', border: 'none' }}
+                    >삭제</Btn>
+                    <Btn
+                      onClick={() => setConfirmId(null)}
+                      style={{ height: 28, fontSize: 11 }}
+                    >취소</Btn>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <Link href={`/result/${it.id}`} style={{ flex: 1 }}>
+                      <Btn style={{ width: '100%', height: 32, fontSize: 11 }}>📄 분석 결과 보기</Btn>
+                    </Link>
+                    <Link href={`/sales-record/${it.menuId}`} style={{ flex: 1 }}>
+                      <Btn style={{ width: '100%', height: 32, fontSize: 11 }}>
+                        📊 실판매 기록 ({salesCount})
+                      </Btn>
+                    </Link>
+                    <Btn
+                      onClick={() => setConfirmId(it.id)}
+                      style={{ height: 32, fontSize: 11, padding: '0 10px', color: '#ef4444' }}
+                    >삭제</Btn>
+                  </div>
+                )}
               </Box>
             );
           })}

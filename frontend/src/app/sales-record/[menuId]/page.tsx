@@ -204,7 +204,7 @@ export default function SalesRecordPage() {
                   </Badge>
                 </div>
                 <div style={{ marginTop: 12, fontSize: 11.5 }}>
-                  <PendingMarker>보정값을 결과 페이지 재무 시뮬레이션에 자동 반영하는 동선 합의 필요</PendingMarker>
+                  <PendingMarker>보정값을 결과 페이지 재무 시뮬레이션에 자동 반영하는 동선 추가 예정</PendingMarker>
                 </div>
               </>
             ) : correctionError ? (

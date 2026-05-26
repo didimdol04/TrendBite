@@ -7,7 +7,7 @@ import { AddressInput } from '@/components/AddressInput';
 import { LoadingOverlay } from '@/components/LoadingOverlay';
 import { useWizardForm } from '@/lib/wizardForm';
 import { useUser } from '@/lib/userContext';
-import { runAnalysis, searchMenuKeywords, isTrendWeak } from '@/lib/api';
+import { runAnalysis, searchMenuKeywords, getPopularKeywords, isTrendWeak } from '@/lib/api';
 import { toast } from '@/components/Toast';
 import { CATEGORY_OPTIONS } from '@/lib/mockData';
 import type { EmployeeDto, AnalysisRequest } from '@/lib/types';
@@ -38,6 +38,7 @@ function AnalyzeInner() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0); // 0~3: 입지/재무/트렌드/AI
+  const [isCompleting, setIsCompleting] = useState(false); // API 응답 후 100% 전환 신호
   // 사용자가 Step1에서 명시적으로 트렌드를 건너뛰기로 선택했을 때만 true — 타이핑 결과로 자동 설정 안 함
   const [userForceSkipTrend, setUserForceSkipTrend] = useState(false);
 
@@ -65,15 +66,17 @@ function AnalyzeInner() {
   const onSubmit = async () => {
     setSubmitting(true);
     setLoadingStep(0);
-    // 데모: 4단계 progress 시뮬레이션 (총 ~2초)
+    setIsCompleting(false);
+    // 4단계 progress 시뮬레이션 (총 ~2초) — step 3(AI) 도달 후 API 응답까지 75%에서 대기
     const stepInterval = setInterval(() => {
       setLoadingStep(s => Math.min(3, s + 1));
     }, 500);
     try {
       const res = await runAnalysis(form);
       clearInterval(stepInterval);
-      setLoadingStep(3); // 마지막 단계까지 표시
-      await new Promise(r => setTimeout(r, 400));
+      setLoadingStep(3);      // 4단계 모두 체크
+      setIsCompleting(true);  // 도넛 100% 점프
+      await new Promise(r => setTimeout(r, 600));
 
       // 분석 결과 기반 트렌드 건너뜀 최종 판정
       const backendTrendWeak = isTrendWeak(res.data.trend);
@@ -211,7 +214,7 @@ function AnalyzeInner() {
         }
       `}</style>
 
-      {submitting && <LoadingOverlay menuName={form.finance.menuInfo.menuName || form.keyword || '신메뉴'} activeStep={loadingStep} />}
+      {submitting && <LoadingOverlay menuName={form.finance.menuInfo.menuName || form.keyword || '신메뉴'} activeStep={loadingStep} isCompleting={isCompleting} />}
     </div>
   );
 }
@@ -230,7 +233,6 @@ function FormBar({
       flexWrap: 'wrap', gap: 12,
     }}>
       <Btn onClick={onPrev} disabled={step === 0}>← 이전</Btn>
-      <span className="wf-mono">데모 모드 · 필수 검증은 일부만 동작</span>
       {isLast ? (
         <Btn primary lg onClick={onSubmit} disabled={submitting} style={{ padding: '0 36px' }}>
           {submitting ? '분석 중...' : '분석 시작 →'}
@@ -255,6 +257,18 @@ function Step1({
 }) {
   const [candidates, setCandidates] = useState<string[]>([]);
   const [noDataMode, setNoDataMode] = useState(false);
+  const [popularKeywords, setPopularKeywords] = useState<string[]>([]);
+
+  useEffect(() => {
+    getPopularKeywords(8)
+      .then(res => {
+        // 백엔드 중복 항목 방어적 제거
+        const seen = new Set<string>();
+        const unique = res.filter(k => !seen.has(k.keyword) && seen.add(k.keyword));
+        setPopularKeywords(unique.map(k => k.keyword));
+      })
+      .catch(() => {});
+  }, []);
 
   const setMenu = (patch: Partial<typeof form.finance.menuInfo>) => {
     setForm(f => ({
@@ -288,6 +302,8 @@ function Step1({
   const inputName = form.finance.menuInfo.menuName.trim();
   const isExactMatch = inputName.length > 0 && candidates.includes(inputName);
   const displayCandidates = candidates.filter(c => c !== inputName);
+  const chipsToShow = inputName === '' ? popularKeywords : displayCandidates;
+  const chipsLabel  = inputName === '' ? '🔥 지금 뜨는 메뉴' : '연관 메뉴';
 
   return (
     <div>
@@ -304,30 +320,19 @@ function Step1({
             value={form.finance.menuInfo.menuName}
             onChange={(e) => onMenuNameChange(e.target.value)}
           />
-          {/* 키워드 포함 매칭 후보 목록 */}
-          {displayCandidates.length > 0 && !isExactMatch && (
-            <div style={{
-              marginTop: 4,
-              border: '1px solid var(--tb-line)',
-              borderRadius: 'var(--tb-radius-sm)',
-              overflow: 'hidden',
-              background: '#fff',
-            }}>
-              {displayCandidates.map(c => (
-                <div
-                  key={c}
-                  onClick={() => onMenuNameChange(c)}
-                  style={{
-                    padding: '9px 14px', fontSize: 13, cursor: 'pointer',
-                    borderBottom: '1px solid var(--tb-line-2)',
-                    transition: 'background 0.1s',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.background = 'var(--tb-card)')}
-                  onMouseLeave={e => (e.currentTarget.style.background = '#fff')}
-                >
-                  {c}
-                </div>
-              ))}
+          {/* 인기 트렌드 키워드(입력 없음) / 검색 매칭 키워드(타이핑 중) */}
+          {chipsToShow.length > 0 && !isExactMatch && (
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontSize: 11, color: 'var(--tb-ink-3)', marginBottom: 6 }}>
+                {chipsLabel}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {chipsToShow.map(kw => (
+                  <Chip key={kw} onClick={() => onMenuNameChange(kw)}>
+                    {kw}
+                  </Chip>
+                ))}
+              </div>
             </div>
           )}
           {/* 아직 분석된 적 없는 메뉴 — 부드러운 안내 (트렌드는 분석 후 결과 기반으로 판단) */}
