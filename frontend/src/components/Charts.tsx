@@ -160,6 +160,57 @@ export const SketchWaterfall = ({
   );
 };
 
+const MULTI_COLORS = [
+  'var(--tb-navy)',
+  'var(--tb-amber)',
+  'var(--tb-success)',
+];
+const MULTI_DASH: (string | undefined)[] = [undefined, '8 4', '3 4'];
+
+/** 여러 시리즈를 한 차트에 겹쳐 그리는 라인 차트. 기존 SketchLine 시그니처 유지. */
+export const SketchLineMulti = ({
+  width = 380, height = 150,
+  series,
+}: {
+  width?: number;
+  height?: number;
+  series: { data: number[]; name?: string; color?: string }[];
+}) => {
+  const pad = 8;
+  const w = width - pad * 2;
+  const h = height - pad * 2;
+
+  const allValues = series.flatMap(s => s.data);
+  if (allValues.length === 0) return null;
+  const max = Math.max(...allValues);
+  const min = Math.min(...allValues);
+  const range = max - min || 1;
+
+  return (
+    <svg width={width} height={height} style={{ display: 'block' }}>
+      <line x1={pad} y1={pad + h} x2={pad + w} y2={pad + h} className="sketch-axis" />
+      {series.map((s, si) => {
+        if (s.data.length < 2) return null;
+        const pts: [number, number][] = s.data.map((v, i) => [
+          pad + (i / (s.data.length - 1)) * w,
+          pad + h - ((v - min) / range) * h,
+        ]);
+        const d = jitterPath(pts, 0.8);
+        const color = s.color || MULTI_COLORS[si % MULTI_COLORS.length];
+        const dash = MULTI_DASH[si % MULTI_DASH.length];
+        return (
+          <path
+            key={si} d={d}
+            stroke={color} strokeWidth={2} fill="none"
+            strokeLinecap="round" strokeLinejoin="round"
+            strokeDasharray={dash}
+          />
+        );
+      })}
+    </svg>
+  );
+};
+
 /** 카카오 지도 placeholder — 데모에선 SVG로 대체. 실제 연동시 KakaoMap SDK 사용 */
 export const MapPh = ({
   width = '100%', height = 220, address,
