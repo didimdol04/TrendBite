@@ -167,14 +167,22 @@ const MULTI_COLORS = [
 ];
 const MULTI_DASH: (string | undefined)[] = [undefined, '8 4', '3 4'];
 
-/** 여러 시리즈를 한 차트에 겹쳐 그리는 라인 차트. 기존 SketchLine 시그니처 유지. */
+/**
+ * 여러 시리즈를 한 차트에 겹쳐 그리는 라인 차트.
+ * responsive=true 시 width="100%" + viewBox로 컨테이너 폭에 맞게 반응형 렌더링.
+ * axisTicks: 상대 x축 눈금 라벨 (HTML overlay로 렌더링해 텍스트 왜곡 없음).
+ */
 export const SketchLineMulti = ({
   width = 380, height = 150,
   series,
+  responsive = false,
+  axisTicks,
 }: {
   width?: number;
   height?: number;
   series: { data: number[]; name?: string; color?: string }[];
+  responsive?: boolean;
+  axisTicks?: { index: number; label: string }[];
 }) => {
   const pad = 8;
   const w = width - pad * 2;
@@ -186,27 +194,71 @@ export const SketchLineMulti = ({
   const min = Math.min(...allValues);
   const range = max - min || 1;
 
+  const maxLen = Math.max(...series.map(s => s.data.length), 2);
+
+  const chartPaths = series.map((s, si) => {
+    if (s.data.length < 2) return null;
+    const pts: [number, number][] = s.data.map((v, i) => [
+      pad + (i / (s.data.length - 1)) * w,
+      pad + h - ((v - min) / range) * h,
+    ]);
+    const d = jitterPath(pts, 0.8);
+    const color = s.color || MULTI_COLORS[si % MULTI_COLORS.length];
+    const dash = MULTI_DASH[si % MULTI_DASH.length];
+    return (
+      <path
+        key={si} d={d}
+        stroke={color} strokeWidth={2} fill="none"
+        strokeLinecap="round" strokeLinejoin="round"
+        strokeDasharray={dash}
+      />
+    );
+  });
+
+  const axisLine = <line x1={pad} y1={pad + h} x2={pad + w} y2={pad + h} className="sketch-axis" />;
+
+  if (responsive) {
+    return (
+      <div>
+        <svg
+          width="100%"
+          height={height}
+          viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="none"
+          style={{ display: 'block' }}
+        >
+          {axisLine}
+          {chartPaths}
+        </svg>
+        {axisTicks && axisTicks.length > 0 && (
+          <div style={{ position: 'relative', height: 18, marginTop: 2 }}>
+            {axisTicks.map(tick => (
+              <span
+                key={tick.index}
+                style={{
+                  position: 'absolute',
+                  left: `${(tick.index / (maxLen - 1)) * 100}%`,
+                  transform: 'translateX(-50%)',
+                  fontSize: 10,
+                  color: 'var(--tb-ink-3)',
+                  fontFamily: 'var(--tb-font-mono)',
+                  whiteSpace: 'nowrap',
+                  userSelect: 'none',
+                }}
+              >
+                {tick.label}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <svg width={width} height={height} style={{ display: 'block' }}>
-      <line x1={pad} y1={pad + h} x2={pad + w} y2={pad + h} className="sketch-axis" />
-      {series.map((s, si) => {
-        if (s.data.length < 2) return null;
-        const pts: [number, number][] = s.data.map((v, i) => [
-          pad + (i / (s.data.length - 1)) * w,
-          pad + h - ((v - min) / range) * h,
-        ]);
-        const d = jitterPath(pts, 0.8);
-        const color = s.color || MULTI_COLORS[si % MULTI_COLORS.length];
-        const dash = MULTI_DASH[si % MULTI_DASH.length];
-        return (
-          <path
-            key={si} d={d}
-            stroke={color} strokeWidth={2} fill="none"
-            strokeLinecap="round" strokeLinejoin="round"
-            strokeDasharray={dash}
-          />
-        );
-      })}
+      {axisLine}
+      {chartPaths}
     </svg>
   );
 };

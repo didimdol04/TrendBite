@@ -168,7 +168,7 @@ export default function SalesRecordPage() {
 
           <div style={{ marginTop: 16, padding: '10px 12px', background: 'var(--tb-card)', borderRadius: 6, fontSize: 11.5, color: 'var(--tb-ink-3)' }}>
             <div style={{ marginBottom: 4 }}>📅 <b>매일 1회 기록 권장</b> · 동일 날짜 중복 불가</div>
-            <div>📦 <b>CSV 일괄 업로드</b>는 추후 지원 예정</div>
+            <div>📦 <b>CSV 일괄 업로드</b>는 추후 지원</div>
           </div>
         </Box>
 
@@ -203,9 +203,9 @@ export default function SalesRecordPage() {
                     {((correction.data.correctionRate - 1) * 100).toFixed(1)}%
                   </Badge>
                 </div>
-                <div style={{ marginTop: 12, fontSize: 11.5 }}>
+                {/* <div style={{ marginTop: 12, fontSize: 11.5 }}>
                   <PendingMarker>보정값을 결과 페이지 재무 시뮬레이션에 자동 반영하는 동선 추가 예정</PendingMarker>
-                </div>
+                </div> */}
               </>
             ) : correctionError ? (
               <div style={{ fontSize: 12, color: 'var(--tb-ink-3)' }}>

@@ -17,10 +17,20 @@ const STORAGE_KEY = 'trendbite_user';
 const ANALYSES_KEY = 'trendbite_analyses';
 const SALES_KEY = 'trendbite_sales';
 const KNOWN_NICKNAMES_KEY = 'trendbite_known_nicknames';
+const COMPARE_HISTORY_KEY = 'trendbite_compare_history';
+const COMPARE_HISTORY_MAX = 10;
 
 export type UserState =
   | { kind: 'guest' }
   | { kind: 'identified'; user: UserProfile };
+
+export interface CompareHistoryEntry {
+  key: string;        // sorted ids joined by ',' — 중복 제거 키
+  ids: string[];
+  menuNames: string[];
+  userId: string;
+  createdAt: string;
+}
 
 interface Ctx {
   state: UserState;
@@ -33,6 +43,10 @@ interface Ctx {
   deleteAnalysis: (id: string) => void;
   saveSalesRecord: (input: Omit<SavedSalesRecord, 'id' | 'userId' | 'createdAt'>) => SavedSalesRecord;
   getSalesRecords: (menuId: number) => SavedSalesRecord[];
+  saveCompareHistory: (ids: string[]) => void;
+  getCompareHistory: () => CompareHistoryEntry[];
+  removeCompareHistoryEntry: (key: string) => void;
+  clearCompareHistory: () => void;
 }
 
 const UserContext = createContext<Ctx | null>(null);
@@ -183,11 +197,63 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       .sort((a, b) => a.salesDate.localeCompare(b.salesDate));
   }, [state]);
 
+  const saveCompareHistory = useCallback((ids: string[]) => {
+    if (state.kind !== 'identified' || ids.length < 2) return;
+    const sortedIds = [...ids].sort();
+    const key = sortedIds.join(',');
+    const all = readJson<CompareHistoryEntry[]>(COMPARE_HISTORY_KEY, []);
+    const analyses = readJson<SavedAnalysis[]>(ANALYSES_KEY, []);
+    const analysisMap = new Map(analyses.map(a => [a.id, a]));
+
+    // ids가 모두 존재하는지 확인
+    if (!ids.every(id => analysisMap.has(id))) return;
+
+    const menuNames = ids.map(id => analysisMap.get(id)!.menuName);
+    const entry: CompareHistoryEntry = {
+      key,
+      ids,
+      menuNames,
+      userId: state.user.id,
+      createdAt: new Date().toISOString(),
+    };
+
+    // 같은 조합 제거 후 앞에 추가, 최대 개수 유지
+    const filtered = all.filter(e => !(e.userId === state.user.id && e.key === key));
+    filtered.unshift(entry);
+    const userEntries = filtered.filter(e => e.userId === state.user.id).slice(0, COMPARE_HISTORY_MAX);
+    const otherEntries = filtered.filter(e => e.userId !== state.user.id);
+    writeJson(COMPARE_HISTORY_KEY, [...userEntries, ...otherEntries]);
+  }, [state]);
+
+  const getCompareHistory = useCallback((): CompareHistoryEntry[] => {
+    if (state.kind !== 'identified') return [];
+    const all = readJson<CompareHistoryEntry[]>(COMPARE_HISTORY_KEY, []);
+    const analyses = readJson<SavedAnalysis[]>(ANALYSES_KEY, []);
+    const existingIds = new Set(analyses.map(a => a.id));
+    return all
+      .filter(e => e.userId === state.user.id)
+      .filter(e => e.ids.every(id => existingIds.has(id)))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }, [state]);
+
+  const removeCompareHistoryEntry = useCallback((key: string) => {
+    if (state.kind !== 'identified') return;
+    const all = readJson<CompareHistoryEntry[]>(COMPARE_HISTORY_KEY, []);
+    writeJson(COMPARE_HISTORY_KEY, all.filter(e => !(e.userId === state.user.id && e.key === key)));
+  }, [state]);
+
+  const clearCompareHistory = useCallback(() => {
+    if (state.kind !== 'identified') return;
+    const all = readJson<CompareHistoryEntry[]>(COMPARE_HISTORY_KEY, []);
+    writeJson(COMPARE_HISTORY_KEY, all.filter(e => e.userId !== state.user.id));
+  }, [state]);
+
   return (
     <UserContext.Provider value={{
       state, login, logout, isReturning,
       saveAnalysis, getAnalyses, getAnalysis, deleteAnalysis,
       saveSalesRecord, getSalesRecords,
+      saveCompareHistory, getCompareHistory, removeCompareHistoryEntry, clearCompareHistory,
     }}>
       {children}
     </UserContext.Provider>

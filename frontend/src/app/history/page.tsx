@@ -6,8 +6,9 @@ import { Box, Btn, Badge, Chip, Input } from '@/components/Primitives';
 import { SketchLine } from '@/components/Charts';
 import { NicknameGate } from '@/components/NicknameGate';
 import { useUser } from '@/lib/userContext';
+import type { CompareHistoryEntry } from '@/lib/userContext';
 import { deleteAnalysisApi } from '@/lib/api';
-import { groupByMenu } from '@/lib/compare';
+import { groupByMenu, josa } from '@/lib/compare';
 import { toast } from '@/components/Toast';
 import type { SavedAnalysis } from '@/lib/types';
 
@@ -23,13 +24,28 @@ const VERDICT_TONE: Record<string, 'navy' | 'amber' | 'grey' | 'dark'> = {
   '보류': 'dark',
 };
 
+function relativeDate(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return '오늘';
+  if (days === 1) return '1일 전';
+  if (days < 7) return `${days}일 전`;
+  if (days < 30) return `${Math.floor(days / 7)}주 전`;
+  return `${Math.floor(days / 30)}개월 전`;
+}
+
 export default function HistoryPage() {
   const router = useRouter();
-  const { state, getAnalyses, getSalesRecords, deleteAnalysis } = useUser();
+  const {
+    state, getAnalyses, getSalesRecords, deleteAnalysis,
+    getCompareHistory, removeCompareHistoryEntry,
+  } = useUser();
   const [items, setItems] = useState<SavedAnalysis[]>([]);
+  const [compareHistory, setCompareHistory] = useState<CompareHistoryEntry[]>([]);
   const [search, setSearch] = useState('');
   const [showGate, setShowGate] = useState(false);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   // 비교 모드
   const [compareMode, setCompareMode] = useState(false);
@@ -38,10 +54,11 @@ export default function HistoryPage() {
   useEffect(() => {
     if (state.kind === 'identified') {
       setItems(getAnalyses());
+      setCompareHistory(getCompareHistory());
     } else {
       setShowGate(true);
     }
-  }, [state, getAnalyses]);
+  }, [state, getAnalyses, getCompareHistory]);
 
   // 비교 모드 OFF 시 선택 초기화
   useEffect(() => {
@@ -51,6 +68,7 @@ export default function HistoryPage() {
   const handleDelete = async (it: SavedAnalysis) => {
     deleteAnalysis(it.id);
     setItems(getAnalyses());
+    setCompareHistory(getCompareHistory());
     setConfirmId(null);
     if (it.menuId) {
       deleteAnalysisApi(it.menuId).catch(() => {});
@@ -80,15 +98,22 @@ export default function HistoryPage() {
     router.push(`/history/compare?ids=${ids.join(',')}`);
   };
 
+  const handleRemoveHistory = (key: string) => {
+    removeCompareHistoryEntry(key);
+    setCompareHistory(getCompareHistory());
+  };
+
   const filtered = items.filter(i =>
     !search || i.menuName.toLowerCase().includes(search.toLowerCase())
   );
 
   const recommendedGroups = groupByMenu(items);
-
   const selectedItems = items.filter(i => selectedIds.includes(i.id));
   const categories = new Set(selectedItems.map(i => i.category));
   const hasCategoryMismatch = categories.size > 1;
+
+  const visibleHistory = showAllHistory ? compareHistory : compareHistory.slice(0, 3);
+  const hiddenCount = compareHistory.length - 3;
 
   if (state.kind !== 'identified') {
     return (
@@ -143,26 +168,100 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      {/* 추천 비교 배너 */}
-      {recommendedGroups.length > 0 && !compareMode && (
-        <div style={{
-          marginBottom: 20,
-          padding: '12px 18px',
-          background: 'var(--tb-navy-soft)',
-          border: '1px solid var(--tb-line)',
-          borderRadius: 'var(--tb-radius)',
-          display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
-        }}>
-          <span style={{ fontSize: 13, color: 'var(--tb-navy)', fontWeight: 600 }}>
-            "{recommendedGroups[0].menuName}"을 {recommendedGroups[0].items.length}곳에서 분석했어요 — 한눈에 비교해볼까요?
-          </span>
-          <Btn
-            style={{ height: 30, fontSize: 11.5, padding: '0 12px' }}
-            onClick={() => handleAutoGroup(recommendedGroups[0].items.map(i => i.id))}
-          >
-            → 비교하기
-          </Btn>
-        </div>
+      {/* ── 비교 이력 배너 / 자동 추천 배너 ── */}
+      {!compareMode && (
+        <>
+          {compareHistory.length > 0 ? (
+            <div style={{
+              marginBottom: 20,
+              border: '1px solid var(--tb-line)',
+              borderRadius: 'var(--tb-radius)',
+              overflow: 'hidden',
+            }}>
+              {/* 헤더 */}
+              <div style={{
+                padding: '10px 16px',
+                background: 'var(--tb-navy-soft)',
+                borderBottom: '1px solid var(--tb-line)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <span style={{ fontSize: 12.5, color: 'var(--tb-navy)', fontWeight: 700 }}>
+                  ⚖ 이전에 비교한 분석 다시 보기
+                </span>
+                <span className="wf-mono">{compareHistory.length}건</span>
+              </div>
+              {/* 이력 목록 */}
+              {visibleHistory.map(entry => {
+                const menuLabel = entry.menuNames.join(' · ');
+                return (
+                  <div
+                    key={entry.key}
+                    style={{
+                      padding: '10px 16px',
+                      borderBottom: '1px solid var(--tb-line-2)',
+                      display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--tb-ink)' }}>
+                        {menuLabel}
+                      </span>
+                      <span className="wf-mono" style={{ marginLeft: 8 }}>
+                        {relativeDate(entry.createdAt)}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                      <Btn
+                        style={{ height: 28, fontSize: 11, padding: '0 10px' }}
+                        onClick={() => handleAutoGroup(entry.ids)}
+                      >
+                        다시 보기 →
+                      </Btn>
+                      <Btn
+                        style={{ height: 28, fontSize: 11, padding: '0 8px', color: 'var(--tb-ink-3)' }}
+                        onClick={() => handleRemoveHistory(entry.key)}
+                        title="이력에서 제거"
+                      >
+                        ✕
+                      </Btn>
+                    </div>
+                  </div>
+                );
+              })}
+              {/* 더 보기 */}
+              {compareHistory.length > 3 && (
+                <div style={{ padding: '8px 16px', textAlign: 'right' }}>
+                  <Btn
+                    style={{ height: 28, fontSize: 11, color: 'var(--tb-navy)' }}
+                    onClick={() => setShowAllHistory(v => !v)}
+                  >
+                    {showAllHistory ? '접기 ∧' : `더 보기 (${hiddenCount}건 더) ∨`}
+                  </Btn>
+                </div>
+              )}
+            </div>
+          ) : recommendedGroups.length > 0 && (
+            /* 비교 이력 없을 때: 자동 추천 */
+            <div style={{
+              marginBottom: 20,
+              padding: '12px 18px',
+              background: 'var(--tb-navy-soft)',
+              border: '1px solid var(--tb-line)',
+              borderRadius: 'var(--tb-radius)',
+              display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+            }}>
+              <span style={{ fontSize: 13, color: 'var(--tb-navy)', fontWeight: 600 }}>
+                &ldquo;{recommendedGroups[0].menuName}&rdquo;{josa(recommendedGroups[0].menuName, '을를')} {recommendedGroups[0].items.length}곳에서 분석했어요 — 한눈에 비교해볼까요?
+              </span>
+              <Btn
+                style={{ height: 30, fontSize: 11.5, padding: '0 12px' }}
+                onClick={() => handleAutoGroup(recommendedGroups[0].items.map(i => i.id))}
+              >
+                → 비교하기
+              </Btn>
+            </div>
+          )}
+        </>
       )}
 
       {/* 비교 모드 안내 */}
@@ -348,7 +447,7 @@ export default function HistoryPage() {
               background: 'rgba(224,168,0,0.2)', color: '#E0A800',
               borderColor: 'rgba(224,168,0,0.4)', fontSize: 11.5,
             }}>
-              ⚠ 카테고리 불일치
+              ⚠ 카테고리 불일치 — 점수 직접 비교에 주의
             </Chip>
           )}
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
