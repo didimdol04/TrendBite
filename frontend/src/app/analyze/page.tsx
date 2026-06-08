@@ -309,7 +309,7 @@ function Step1({
     <div>
       <div className="wf-h1" style={{ fontSize: 24, marginBottom: 6 }}>메뉴 정보를 입력해주세요</div>
       <p className="wf-muted" style={{ fontSize: 12.5, marginBottom: 24 }}>
-        분석할 메뉴의 기본 정보입니다. 5분이면 충분해요.
+        분석할 메뉴의 기본 정보입니다.
       </p>
 
       <div className="grid-2col">

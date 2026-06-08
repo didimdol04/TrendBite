@@ -49,7 +49,7 @@ export default function LandingPage() {
               감이 아닌 <span style={{ color: 'var(--tb-navy)' }}>데이터로</span> 결정하세요
             </h1>
             <p className="wf-muted" style={{ fontSize: 14, marginBottom: 24, maxWidth: 460 }}>
-              트렌드 분석, 입지 평가, 재무 시뮬레이션을 한 번에. 30초 안에 도입 여부를 판단해드려요.
+              트렌드 분석, 입지 평가, 재무 시뮬레이션을 한 번에.
             </p>
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <Btn primary lg onClick={startAnalysis}>내 메뉴 분석하기 →</Btn>
@@ -128,7 +128,7 @@ export default function LandingPage() {
               지금 바로, 내 메뉴를 검증해보세요
             </div>
             <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13 }}>
-              평균 30초 · 닉네임/가게명 한 줄이면 결과 저장도 가능
+              평균 3분 · 닉네임/가게명 한 줄이면 결과 저장도 가능
             </div>
           </div>
           <Btn
